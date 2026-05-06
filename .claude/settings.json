@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ls /home/zixigu/workspace/Goo-wiki/CLAUDE.md >/dev/null 2>&1 && echo '✓ Goo-wiki vault ready' || echo '⚠ Goo-wiki not found — Obsidian归档将使用 fallback 模式 (.goo/obsidian/)'"
+          },
+          {
+            "type": "command",
+            "command": "cat /home/zixigu/workspace/AutoGoo/.goo/plan.json 2>/dev/null && echo '⚠ 发现未完成任务，输入 continue 可继续执行' || true"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(echo *)",
+      "Bash(which *)",
+      "Bash(pip *)",
+      "Bash(python *)",
+      "Bash(ruff *)",
+      "Edit",
+      "Write",
+      "Read"
+    ]
+  }
+}

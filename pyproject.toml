@@ -1,0 +1,21 @@
+[project]
+name = "auto-goo"
+version = "0.1.0"
+description = "自动化智能体编排框架 — 任务解析、并行执行、优化迭代、自动评测"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
