@@ -1,8 +1,8 @@
 ---
 name: auto-goo
-description: This skill should be used when the user says "开始任务", "/auto-goo", "run:", or gives any multi-step task that can be decomposed into sub-tasks. Automates the full workflow: parse task into DAG → parallel/serial execution via Subagent dispatch → optimization iteration → Goo-wiki archiving. Requires Read, Write, Edit, Bash, WebSearch, Agent tools. Should NOT trigger for single-step tasks, pure Q&A, or tasks already covered by a more specific skill.
+description: "This skill should be used when the user says '开始任务', '/auto-goo', 'run:', or gives any multi-step task that can be decomposed into sub-tasks. Automates the full workflow: parse task into DAG, parallel/serial execution via Subagent dispatch, optimization iteration, Goo-wiki archiving. Requires Read, Write, Edit, Bash, WebSearch, Agent tools. Should NOT trigger for single-step tasks, pure Q&A, or tasks already covered by a more specific skill."
 version: 0.1.0
-tools: Read, Write, Edit, Bash, WebSearch, Agent
+tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 ---
 
 # AutoGoo 自动化工作流
