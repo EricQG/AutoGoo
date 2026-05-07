@@ -1,2 +1,6 @@
 # Auto-generated execution records
 .goo/
+
+# Python
+__pycache__/
+*.pyc
