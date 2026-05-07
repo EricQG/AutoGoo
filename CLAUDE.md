@@ -16,7 +16,7 @@ AutoGoo 是一个自动化智能体编排框架。接收用户任务后自动解
 
 ```
 1. Goo-wiki vault 检测
-   → SessionStart hook 自动执行（见 skills/auto-goo/references/setup.md）
+   → SessionStart hook 自动执行（配置见 skills/auto-goo/references/setup.md）
    → vault 不存在则使用 .goo/obsidian/ fallback
 
 2. 检查未完成任务
@@ -28,36 +28,19 @@ AutoGoo 是一个自动化智能体编排框架。接收用户任务后自动解
 
 ## 核心工作流
 
-完整工作流定义在 **auto-goo skill** 中：
+完整工作流定义在 **auto-goo skill** 中，快捷命令表也见该文件：
 
 ```
-用户任务 → [任务解析] → plan.json(DAG) → [执行引擎] → 记录归档
-                                    ↓ (若含优化标记)
-                           [优化迭代循环] → [指标搜索] → 评测 → 对比记录
+skills/auto-goo/SKILL.md
 ```
 
 各阶段详细规范：
-- **SKILL.md** — `skills/auto-goo/SKILL.md`
 - **环境设置** — `skills/auto-goo/references/setup.md`
 - **任务解析** — `skills/auto-goo/references/task-parsing.md`
 - **执行引擎** — `skills/auto-goo/references/execution-engine.md`
 - **优化循环** — `skills/auto-goo/references/optimization-loop.md`
 - **Obsidian 归档** — `skills/auto-goo/references/obsidian-archive.md`
 - **Python 规范** — `skills/auto-goo/references/python-standards.md`
-
-## 快捷命令
-
-| 用户说 | 行为 |
-|--------|------|
-| "开始任务 / run: / 做这个" | 任务解析 → 执行 |
-| "优化 / optimize" | 启动优化迭代循环 |
-| "评测 / evaluate / benchmark" | 搜索指标 → 评测 → 记录 |
-| "状态 / status / 进展" | 展示 `.goo/logs/_summary.md` |
-| "日志 / logs" | 列出 `.goo/logs/` 下所有文件 |
-| "重新规划 / replan" | 重新解析当前任务 |
-| "继续 / continue" | 从上次中断的步骤继续 |
-| "并行执行 / parallel" | 按 DAG 当前轮并行分发 |
-| "重试 / retry" | 重试失败的步骤 |
 
 ## 流程自省与持续改进
 
