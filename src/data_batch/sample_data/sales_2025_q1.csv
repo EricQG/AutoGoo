@@ -1,0 +1,11 @@
+date,product_id,product_name,quantity,unit_price,total_amount,region
+2025-01-05,P001,Widget Alpha,10,15.50,155.00,North
+2025-01-12,P002,Gadget Beta,5,89.00,445.00,South
+2025-01-19,P003,Widget Gamma,20,12.00,240.00,East
+2025-02-02,P001,Widget Alpha,15,15.50,232.50,North
+2025-02-10,P004,Gadget Delta,8,45.00,360.00,West
+2025-02-18,P002,Gadget Beta,12,89.00,1068.00,South
+2025-03-01,P003,Widget Gamma,25,12.00,300.00,East
+2025-03-08,P001,Widget Alpha,7,15.50,108.50,North
+2025-03-15,P004,Gadget Delta,10,45.00,450.00,West
+2025-03-22,P005,Widget Epsilon,30,3.75,112.50,Central

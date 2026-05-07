@@ -1,0 +1,62 @@
+{
+  "2025-01": {
+    "order_count": 69,
+    "total_sales": 17199.33,
+    "average_sale": 249.27
+  },
+  "2025-02": {
+    "order_count": 66,
+    "total_sales": 17091.48,
+    "average_sale": 258.96
+  },
+  "2025-03": {
+    "order_count": 92,
+    "total_sales": 25290.47,
+    "average_sale": 274.9
+  },
+  "2025-04": {
+    "order_count": 84,
+    "total_sales": 21731.33,
+    "average_sale": 258.71
+  },
+  "2025-05": {
+    "order_count": 92,
+    "total_sales": 22984.7,
+    "average_sale": 249.83
+  },
+  "2025-06": {
+    "order_count": 96,
+    "total_sales": 24161.56,
+    "average_sale": 251.68
+  },
+  "2025-07": {
+    "order_count": 83,
+    "total_sales": 21232.29,
+    "average_sale": 255.81
+  },
+  "2025-08": {
+    "order_count": 92,
+    "total_sales": 23745.02,
+    "average_sale": 258.1
+  },
+  "2025-09": {
+    "order_count": 63,
+    "total_sales": 14650.62,
+    "average_sale": 232.55
+  },
+  "2025-10": {
+    "order_count": 83,
+    "total_sales": 18642.48,
+    "average_sale": 224.61
+  },
+  "2025-11": {
+    "order_count": 83,
+    "total_sales": 20418.14,
+    "average_sale": 246.0
+  },
+  "2025-12": {
+    "order_count": 97,
+    "total_sales": 22740.94,
+    "average_sale": 234.44
+  }
+}

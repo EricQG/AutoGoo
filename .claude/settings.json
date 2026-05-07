@@ -17,21 +17,13 @@
   },
   "permissions": {
     "allow": [
-      "Bash(cat *)",
-      "Bash(ls *)",
-      "Bash(mkdir *)",
-      "Bash(mv *)",
-      "Bash(cp *)",
-      "Bash(find *)",
-      "Bash(grep *)",
-      "Bash(echo *)",
-      "Bash(which *)",
-      "Bash(pip *)",
-      "Bash(python *)",
-      "Bash(ruff *)",
+      "Bash",
       "Edit",
       "Write",
-      "Read"
+      "Read",
+      "Agent",
+      "WebSearch",
+      "WebFetch"
     ]
   }
 }
