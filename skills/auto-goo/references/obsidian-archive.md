@@ -10,7 +10,7 @@
 1. `Goo-wiki/wiki/projects/<project-slug>/`（Goo-wiki vault 存在时）
 2. `.goo/obsidian/<project-slug>/`（fallback，仅本地归档）
 
-**路径检测**：检查 `/home/zixigu/workspace/Goo-wiki/CLAUDE.md` 是否存在。不存在则降级为 fallback。
+**路径检测**：检查 `~/workspace/Goo-wiki/CLAUDE.md` 是否存在（路径可配置，见 `setup.md`）。不存在则降级为 fallback。
 
 ## Goo-wiki 约定
 

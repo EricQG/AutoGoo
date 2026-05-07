@@ -13,42 +13,17 @@
 ### 常用命令
 
 ```bash
-ruff check src/                    # lint 检查
-ruff check src/ --fix              # 自动修复
-python -m pytest tests/ -v        # 运行测试
-python src/<模块>/<脚本>.py        # 运行脚本
+ruff check .                    # lint 检查
+ruff check . --fix              # 自动修复
+python -m pytest -v             # 运行测试
+python <脚本>.py                # 运行脚本
 ```
 
 ## 项目结构
 
 ```
 项目根/
-├── CLAUDE.md
 ├── .goo/        # 自动生成（日志、plan、评测数据）
-├── src/         # 实现代码
-├── tests/       # 测试代码
-```
-
-## 核心接口约定
-
-```python
-# src/orchestrator/scheduler.py — DAG 调度
-def build_schedule(steps: list[StepDef]) -> list[RoundGroup]: ...
-def schedule_from_plan(plan: dict) -> list[RoundGroup]: ...
-
-# src/orchestrator/engine.py — 执行引擎
-class Engine:
-    def __init__(self, plan: dict) -> None: ...
-    async def run_round(self, steps: list[dict], context: dict) -> list[StepResult]: ...
-    def get_context_for(self, step: dict) -> dict: ...
-    def write_log(self, step: dict, result: StepResult) -> Path: ...
-    def summary(self) -> str: ...
-
-# 步骤结果
-class StepResult:
-    step_id: int
-    step_name: str
-    status: str         # "ok" | "failed"
-    elapsed_s: float
-    error: str | None
+├── CLAUDE.md    # 项目专属指引
+└── <实现文件>    # 由 Subagent 按需创建
 ```

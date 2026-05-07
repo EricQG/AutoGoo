@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ls /home/zixigu/workspace/Goo-wiki/CLAUDE.md >/dev/null 2>&1 && echo '✓ Goo-wiki vault ready' || echo '⚠ Goo-wiki not found — Obsidian归档将使用 fallback 模式 (.goo/obsidian/)'"
+            "command": "ls ~/workspace/Goo-wiki/CLAUDE.md >/dev/null 2>&1 && echo '✓ Goo-wiki vault ready' || echo '⚠ Goo-wiki not found — 使用 .goo/obsidian/ fallback'"
           },
           {
             "type": "command",
-            "command": "cat /home/zixigu/workspace/AutoGoo/.goo/plan.json 2>/dev/null && echo '⚠ 发现未完成任务，输入 continue 可继续执行' || true"
+            "command": "cat .goo/plan.json 2>/dev/null && echo '⚠ 发现未完成任务，输入 continue 可继续执行' || true"
           }
         ]
       }
