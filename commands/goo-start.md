@@ -1,18 +1,19 @@
 ---
 name: auto-goo:goo-start
-description: 启动 AutoGoo 自动化工作流 — 将任务解析为 DAG，自动执行并归档
+description: 启动 AutoGoo 完整工作流 — 召回 wiki 经验、生成 DAG、执行、验证并归档
 ---
 
 # /auto-goo:goo-start — 启动 AutoGoo 工作流
 
-输入 `/auto-goo:goo-start <任务描述>` 启动完整工作流。
+输入 `/auto-goo:goo-start <任务描述>` 启动完整工作流。若只想生成计划、不执行，请使用 `/auto-goo:goo-plan`。
 
 ## 工作流阶段
 
-1. **任务解析** — 将任务拆解为 DAG 步骤，输出 `.goo/plan.json`
-2. **执行** — 按轮次并行/串行分发 Subagent
-3. **优化**（如需要）— 指标搜索 → Baseline → 优化 → 评测对比
-4. **归档** — 执行记录写入 Goo-wiki Obsidian vault
+1. **Wiki 经验召回** — 读取已有项目知识和历史经验
+2. **任务解析** — 将任务拆解为 DAG 步骤，输出 `.goo/plan.json`
+3. **执行** — 按轮次并行/串行分发 Subagent
+4. **优化**（如需要）— 指标搜索 → Baseline → 优化 → 评测对比
+5. **归档** — 执行记录和新增经验写入 Goo-wiki
 
 ## 参数
 

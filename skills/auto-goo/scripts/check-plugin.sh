@@ -75,7 +75,7 @@ done
 echo ""
 echo "── 4. 命令文件 ──"
 
-CMDS=("goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status")
+CMDS=("goo-init" "goo-plan" "goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status")
 for cmd in "${CMDS[@]}"; do
   f="$ROOT/commands/$cmd.md"
   if [[ -f "$f" ]]; then
@@ -104,7 +104,7 @@ fi
 echo ""
 echo "── 6. 脚本文件 ──"
 
-SCRIPTS=("init-plan.sh" "check-plugin.sh")
+SCRIPTS=("goo-init.sh" "init-plan.sh" "check-plugin.sh")
 for s in "${SCRIPTS[@]}"; do
   f="$ROOT/skills/auto-goo/scripts/$s"
   if [[ -f "$f" ]]; then
@@ -116,6 +116,25 @@ for s in "${SCRIPTS[@]}"; do
     fi
   else
     fail "scripts/$s 缺失"
+  fi
+done
+
+# ── 6b. 模板文件 ──
+echo ""
+echo "── 6b. 模板文件 ──"
+
+TEMPLATES=("config.example.json" "user-config.example.json")
+for tmpl in "${TEMPLATES[@]}"; do
+  f="$ROOT/skills/auto-goo/templates/$tmpl"
+  if [[ -f "$f" ]]; then
+    pass "templates/$tmpl"
+    if command -v python3 &>/dev/null; then
+      python3 -c "import json; json.load(open('$f'))" 2>/dev/null \
+        && pass "  $tmpl 格式正确" \
+        || fail "  $tmpl 格式错误"
+    fi
+  else
+    fail "templates/$tmpl 缺失"
   fi
 done
 

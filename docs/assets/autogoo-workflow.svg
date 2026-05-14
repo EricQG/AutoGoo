@@ -1,10 +1,10 @@
 <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">AutoGoo workflow</title>
-  <desc id="desc">A five stage workflow from task request to DAG plan, parallel agents, optimization, archive, and improvement.</desc>
+  <desc id="desc">A wiki-grounded workflow from task request to Goo-wiki recall, DAG plan, parallel agents, optimization, archive, and improvement.</desc>
   <rect width="1200" height="520" rx="28" fill="#0F172A"/>
   <rect x="36" y="36" width="1128" height="448" rx="24" fill="#111827" stroke="#334155" stroke-width="2"/>
   <text x="72" y="96" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">AutoGoo</text>
-  <text x="72" y="132" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">DAG-first automation for Claude Code workflows</text>
+  <text x="72" y="132" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Wiki-grounded DAG automation for Claude Code workflows</text>
 
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
@@ -23,24 +23,24 @@
     <text x="98" y="294" fill="#CBD5E1" font-size="15">task intent</text>
 
     <rect x="292" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#38BDF8"/>
-    <text x="318" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Plan</text>
-    <text x="318" y="270" fill="#CBD5E1" font-size="15">DAG steps</text>
-    <text x="318" y="294" fill="#CBD5E1" font-size="15">in .goo/plan.json</text>
+    <text x="318" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Recall</text>
+    <text x="318" y="270" fill="#CBD5E1" font-size="15">Goo-wiki notes</text>
+    <text x="318" y="294" fill="#CBD5E1" font-size="15">and lessons</text>
 
     <rect x="512" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#22C55E"/>
-    <text x="538" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Execute</text>
-    <text x="538" y="270" fill="#CBD5E1" font-size="15">Parallel agents</text>
-    <text x="538" y="294" fill="#CBD5E1" font-size="15">with heartbeats</text>
+    <text x="538" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Plan</text>
+    <text x="538" y="270" fill="#CBD5E1" font-size="15">DAG steps</text>
+    <text x="538" y="294" fill="#CBD5E1" font-size="15">in .goo/plan.json</text>
 
     <rect x="732" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#F59E0B"/>
-    <text x="758" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Optimize</text>
-    <text x="758" y="270" fill="#CBD5E1" font-size="15">Metrics, baseline,</text>
-    <text x="758" y="294" fill="#CBD5E1" font-size="15">profile, compare</text>
+    <text x="758" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Execute</text>
+    <text x="758" y="270" fill="#CBD5E1" font-size="15">Parallel agents</text>
+    <text x="758" y="294" fill="#CBD5E1" font-size="15">and benchmarks</text>
 
     <rect x="952" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#A78BFA"/>
     <text x="978" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Archive</text>
-    <text x="978" y="270" fill="#CBD5E1" font-size="15">Logs and optional</text>
-    <text x="978" y="294" fill="#CBD5E1" font-size="15">Goo-wiki notes</text>
+    <text x="978" y="270" fill="#CBD5E1" font-size="15">Decisions and</text>
+    <text x="978" y="294" fill="#CBD5E1" font-size="15">lessons to wiki</text>
 
     <path d="M244 262H288" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
     <path d="M464 262H508" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
@@ -48,7 +48,7 @@
     <path d="M904 262H948" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
 
     <path d="M1038 342C1038 420 158 420 158 342" stroke="#64748B" stroke-width="3" stroke-dasharray="8 10" marker-end="url(#arrow)"/>
-    <text x="472" y="404" fill="#CBD5E1" font-size="16">self-improvement feedback loop</text>
+    <text x="438" y="404" fill="#CBD5E1" font-size="16">wiki memory and self-improvement loop</text>
 
     <rect x="72" y="360" width="220" height="48" rx="12" fill="#082F49" stroke="#075985"/>
     <text x="94" y="390" fill="#BAE6FD" font-size="16">/auto-goo:goo-start</text>
@@ -57,4 +57,3 @@
     <text x="926" y="390" fill="#DDD6FE" font-size="16">/auto-goo:goo-improve</text>
   </g>
 </svg>
-

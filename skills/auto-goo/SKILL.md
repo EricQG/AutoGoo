@@ -1,24 +1,65 @@
 ---
 name: goo-workflow
-description: "Use when the user says '开始任务', '/auto-goo:goo-start', 'run:', '/auto-goo:goo-improve', '自改进', or gives any multi-step task that can be decomposed into sub-tasks. Runs the Goo workflow: parse task into DAG, parallel/serial execution via Subagent dispatch, optimization iteration, Goo-wiki archiving, and plugin self-improvement. Requires Read, Write, Edit, Bash, WebSearch, Agent tools. Should NOT trigger for single-step tasks, pure Q&A, or tasks already covered by a more specific skill."
+description: "Use when the user says '/auto-goo:goo-init', '开始任务', '/auto-goo:goo-plan', '/auto-goo:goo-start', 'run:', '/auto-goo:goo-improve', '自改进', or gives any multi-step task that can be decomposed into sub-tasks. Runs the Goo workflow: initialize project config, recall Goo-wiki knowledge, parse task into DAG, optionally stop after planning, parallel/serial execution via Subagent dispatch, optimization iteration, Goo-wiki archiving, and plugin self-improvement. Requires Read, Write, Edit, Bash, WebSearch, Agent tools. Should NOT trigger for single-step tasks, pure Q&A, or tasks already covered by a more specific skill."
 version: 0.1.0
 tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 ---
 
 # AutoGoo 自动化工作流
 
-收到可分解的多步任务后，按以下五个阶段执行。单步任务或纯问答不需启动此流程，直接执行即可。
+收到可分解的多步任务后，按以下六个阶段执行。单步任务或纯问答不需启动此流程，直接执行即可。
+
+命令模式：
+- `/auto-goo:goo-init --user`：初始化用户级 `~/.auto-goo/config.json`，作为所有项目的默认配置。
+- `/auto-goo:goo-init --project`：初始化当前项目 `.goo/config.json`，覆盖用户级默认配置。
+- `/auto-goo:goo-plan <任务>`：只执行 Phase 0-1，写入 `.goo/plan.json` 后停止，等待用户确认。
+- `/auto-goo:goo-start <任务>`：执行完整流程，必要时可先生成 plan 再继续执行。
+
+## Phase -1: 项目初始化
+
+首次使用 AutoGoo 时，建议先运行 `/auto-goo:goo-init --user` 写入用户级默认配置；进入具体项目后，可运行 `/auto-goo:goo-init --project` 写入项目级覆盖配置。
+
+初始化要求：
+1. 先定位 `skills/auto-goo/scripts/goo-init.sh` 的真实路径，再直接运行脚本；不得派发 Agent 代替初始化脚本。当前工作目录可能是用户项目，不要假设相对路径存在。
+2. 根据参数或脚本提问选择作用域：`--user` 写 `~/.auto-goo/config.json`，`--project` 写 `.goo/config.json`。如果用户只输入 `/auto-goo:goo-init`，必须先询问作用域，不得默认选择 project；用户回答后必须把 `--user` 或 `--project` 传给脚本。
+3. 必须询问 Goo-wiki 路径，提供默认值 `~/workspace/Goo-wiki`；如果用户不输入路径，就按默认值处理。用户接受默认值或输入自定义路径后，都必须把 `--wiki-dir <路径>` 传给脚本，不得在未展示默认路径的情况下静默使用默认值。
+4. 确保目标目录存在：用户级 `~/.auto-goo/`，项目级 `.goo/`。
+5. 如果目标配置已存在，先读取并展示摘要；未经用户确认不得覆盖。
+6. 按优先级解析 wiki 路径：`AUTO_GOO_WIKI_DIR` → `.goo/config.json.wiki_dir` → `~/.auto-goo/config.json.wiki_dir` → `~/workspace/Goo-wiki`。
+7. 检查 `<wiki_dir>/CLAUDE.md` 是否存在。
+8. 写入目标 config，默认结构参考 `skills/auto-goo/templates/config.example.json`。
+9. 展示推荐 SessionStart hooks，但不要自动覆盖 `.claude/settings.json`，除非用户明确要求。
+
+## Phase 0: Wiki 经验召回
+
+**先查已有经验，再规划新任务。** AutoGoo 的默认目标不是从零开始，而是复用 Goo-wiki 中沉淀的项目知识、历史决策和失败经验。
+
+召回步骤：
+1. 按配置优先级解析 wiki 路径；不存在则记录 fallback，继续使用 `.goo/obsidian/` 本地归档。
+2. 根据用户任务提取项目名、领域词、文件名、命令、数据路径、指标名等关键词。
+3. 在 Goo-wiki 中优先查找：
+   - `wiki/projects/` 下相关项目页和任务页
+   - `wiki/concepts/` 下相关概念、指标、流程规范
+   - `journal/weekly/` 下近期周报中的项目状态、风险、下一步
+   - `log.md` 中最近活动记录
+4. 提炼 `wiki_context`：已有约束、可复用命令、已验证路径、历史坑点、指标口径、命名规范、相关 wikilink。
+5. 规划时必须显式利用这些上下文；如果没有找到相关知识，也要记录 `wiki_context.found=false`，避免假装有历史依据。
+
+不要把 wiki 当成最后才写的报告；它是任务启动时的项目记忆，也是任务结束后的经验沉淀层。
 
 ## Phase 1: 任务解析
 
 **必须先解析为 DAG，不得跳过规划直接动手编码。**
 
 解析步骤：
-1. 识别最终交付物 — "用户最终要拿到什么？是脚本、模型、报告还是系统？"
-2. 逆向拆解 — 从目标倒推，追问到"不可再分"的原子步骤。如果任务本身就是单步的（如"把这个文件转成 PDF"），直接执行，不走此流程。
-3. 标注依赖关系 — 识别前置条件，推导拓扑顺序。原始数据准备 → 处理 → 输出，每一步依赖前一步的输出。
-4. 识别优化标记 — 含"性能、速度、延迟、吞吐、效率、内存、GPU、耗时"关键词 → 标记 `type: "optimize"`
-5. 输出 `.goo/plan.json`
+1. 识别输入形态 — 普通一句话、Markdown 任务包、已有 plan、issue/PR 描述、日志片段等要区别处理。
+2. 如果输入是 Markdown 文件或片段，先解析标题层级、checkbox、编号列表、表格、代码块、路径、命令、约束和验收标准；不得简单视为"文本处理/整理 Markdown"任务。
+3. 识别最终交付物 — "用户最终要拿到什么？是脚本、模型、报告还是系统？"
+4. 合并 wiki_context — 把既有项目经验转成约束、默认命令、风险提醒和可复用产物路径。
+5. 逆向拆解 — 从目标倒推，追问到"不可再分"的原子步骤。如果任务本身就是单步的（如"把这个文件转成 PDF"），直接执行，不走此流程。
+6. 标注依赖关系 — 识别前置条件，推导拓扑顺序。原始数据准备 → 处理 → 输出，每一步依赖前一步的输出。
+7. 识别优化标记 — 含"性能、速度、延迟、吞吐、效率、内存、GPU、耗时"关键词 → 标记 `type: "optimize"`
+8. 输出 `.goo/plan.json`
 
 ### 步骤粒度原则
 
@@ -40,6 +81,11 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 {
   "task": "<任务描述>",
   "created_at": "YYYY-MM-DDTHH-MM-SS",
+  "wiki_context": {
+    "found": true,
+    "sources": ["wiki/projects/<slug>/<note>.md"],
+    "reused_knowledge": ["<约束/命令/路径/指标/历史经验>"]
+  },
   "steps": [
     {
       "id": 1,
@@ -54,6 +100,8 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 ```
 
 完整 schema、时间戳格式、依赖声明规则 → `references/task-parsing.md`
+
+Markdown 任务输入的完整解析规则也在 `references/task-parsing.md`：Markdown 可以是需求文档、TODO 清单、执行计划或 issue 模板，只有用户明确要求总结/润色/改写时才按文本处理。
 
 ## Phase 2: 执行（槽位调度）
 

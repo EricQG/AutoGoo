@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "wiki_dir": "~/workspace/Goo-wiki",
+  "wiki": {
+    "search_paths": [
+      "wiki/projects",
+      "wiki/concepts",
+      "journal/weekly",
+      "log.md"
+    ]
+  },
+  "archive": {
+    "enabled": true,
+    "fallback_dir": ".goo/obsidian"
+  },
+  "execution": {
+    "max_concurrent": 6,
+    "heartbeat_seconds": 30,
+    "stale_after_seconds": 120
+  },
+  "planning": {
+    "recall_wiki": true,
+    "require_wiki_context": false
+  },
+  "init": {
+    "prompt_for_scope": true,
+    "prompt_for_wiki_dir": true
+  }
+}
