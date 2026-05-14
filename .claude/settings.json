@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "cat .goo/plan.json 2>/dev/null && echo '⚠ 发现未完成任务，输入 continue 可继续执行' || true"
+            "command": "cat .goo/plan.json 2>/dev/null && echo '⚠ 发现未完成任务，输入 /auto-goo:goo-continue 可继续执行' || true"
           }
         ]
       }

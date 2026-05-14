@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# AutoGoo 插件自检脚本
+# 验证插件结构完整性，安装后快速确认所有组件就绪
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+ERRORS=0
+WARNINGS=0
+
+info()  { echo -e "  \033[1;34m•\033[0m $1"; }
+pass()  { echo -e "  \033[1;32m✓\033[0m $1"; }
+warn()  { echo -e "  \033[1;33m⚠\033[0m $1"; WARNINGS=$((WARNINGS + 1)); }
+fail()  { echo -e "  \033[1;31m✗\033[0m $1"; ERRORS=$((ERRORS + 1)); }
+
+echo ""
+echo "============================================"
+echo "  AutoGoo 插件自检"
+echo "============================================"
+echo ""
+
+# ── 1. Plugin 元数据 ──
+echo "── 1. Plugin 元数据 ──"
+
+if [[ -f "$ROOT/.claude-plugin/plugin.json" ]]; then
+  pass ".claude-plugin/plugin.json 存在"
+  if command -v python3 &>/dev/null; then
+    python3 -c "import json; json.load(open('$ROOT/.claude-plugin/plugin.json'))" 2>/dev/null \
+      && pass "  plugin.json 格式正确" \
+      || fail "  plugin.json 格式错误"
+  fi
+else
+  fail ".claude-plugin/plugin.json 缺失"
+fi
+
+# ── 2. SKILL ──
+echo ""
+echo "── 2. SKILL 定义 ──"
+
+SKILL="$ROOT/skills/auto-goo/SKILL.md"
+if [[ -f "$SKILL" ]]; then
+  pass "SKILL.md 存在"
+  if head -1 "$SKILL" | grep -q '^---$'; then
+    pass "  YAML frontmatter 起始正确"
+  else
+    fail "  YAML frontmatter 起始缺失"
+  fi
+else
+  fail "SKILL.md 缺失"
+fi
+
+# ── 3. Reference 文件 ──
+echo ""
+echo "── 3. Reference 文件 ──"
+
+REFS=(
+  "execution-engine.md"
+  "obsidian-archive.md"
+  "optimization-loop.md"
+  "python-standards.md"
+  "self-improvement.md"
+  "setup.md"
+  "task-parsing.md"
+)
+
+for ref in "${REFS[@]}"; do
+  f="$ROOT/skills/auto-goo/references/$ref"
+  if [[ -f "$f" ]]; then
+    pass "references/$ref"
+  else
+    fail "references/$ref 缺失"
+  fi
+done
+
+# ── 4. 命令文件 ──
+echo ""
+echo "── 4. 命令文件 ──"
+
+CMDS=("goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status")
+for cmd in "${CMDS[@]}"; do
+  f="$ROOT/commands/$cmd.md"
+  if [[ -f "$f" ]]; then
+    pass "commands/$cmd.md"
+    if grep -q "^name: auto-goo:$cmd$" "$f"; then
+      pass "  /auto-goo:$cmd 注册名正确"
+    else
+      fail "  commands/$cmd.md 注册名应为 name: auto-goo:$cmd"
+    fi
+  else
+    fail "commands/$cmd.md 缺失"
+  fi
+done
+
+# ── 5. Agent 文件 ──
+echo ""
+echo "── 5. Agent 文件 ──"
+
+if [[ -f "$ROOT/agents/obsidian-recorder.md" ]]; then
+  pass "agents/obsidian-recorder.md"
+else
+  fail "agents/obsidian-recorder.md 缺失"
+fi
+
+# ── 6. 脚本文件 ──
+echo ""
+echo "── 6. 脚本文件 ──"
+
+SCRIPTS=("init-plan.sh" "check-plugin.sh")
+for s in "${SCRIPTS[@]}"; do
+  f="$ROOT/skills/auto-goo/scripts/$s"
+  if [[ -f "$f" ]]; then
+    pass "scripts/$s"
+    if [[ -x "$f" ]]; then
+      pass "  $s 可执行"
+    else
+      warn "  $s 不可执行 —— 请 chmod +x"
+    fi
+  else
+    fail "scripts/$s 缺失"
+  fi
+done
+
+# ── 7. 示例文件 ──
+echo ""
+echo "── 7. 示例文件 ──"
+
+EXAMPLES=("csv-analysis-workflow" "optimization-workflow" "multi-step-orchestration")
+for ex in "${EXAMPLES[@]}"; do
+  f="$ROOT/skills/auto-goo/examples/$ex.md"
+  if [[ -f "$f" ]]; then
+    pass "examples/$ex.md"
+  else
+    warn "examples/$ex.md 缺失（可选）"
+  fi
+done
+
+# ── 8. 配置文件 ──
+echo ""
+echo "── 8. 配置文件 ──"
+
+if [[ -f "$ROOT/.claude/settings.json" ]]; then
+  pass ".claude/settings.json"
+else
+  fail ".claude/settings.json 缺失"
+fi
+
+if [[ -f "$ROOT/.gitignore" ]]; then
+  pass ".gitignore"
+else
+  warn ".gitignore 缺失"
+fi
+
+if [[ -f "$ROOT/README.md" ]]; then
+  pass "README.md"
+else
+  warn "README.md 缺失"
+fi
+
+# ── 结果汇总 ──
+echo ""
+echo "============================================"
+if [[ $ERRORS -eq 0 && $WARNINGS -eq 0 ]]; then
+  echo -e "  \033[1;32m全部通过 ✓\033[0m"
+elif [[ $ERRORS -eq 0 ]]; then
+  echo -e "  \033[1;33m通过（$WARNINGS 个警告）\033[0m"
+else
+  echo -e "  \033[1;31m$ERRORS 个错误，$WARNINGS 个警告\033[0m"
+fi
+echo "============================================"
+echo ""
+
+exit $ERRORS
