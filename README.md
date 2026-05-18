@@ -52,7 +52,7 @@ Initialize AutoGoo once for your user account, then optionally per project:
 /auto-goo:goo-init --project
 ```
 
-`goo-init` is backed by a local interactive script. It asks for scope and wiki path, offers `~/workspace/Goo-wiki` as the default, and writes config directly without delegating to an agent.
+`goo-init` is backed by a local interactive script. It asks for scope and wiki path, offers `~/workspace/Goo-wiki` as the default, and writes config directly without delegating to an agent. When project-level init uses an available Goo-wiki vault, it asks whether to add Goo-wiki recall and archive requirements to the project's `CLAUDE.md` with an idempotent AutoGoo marker block.
 
 Draft a plan first when you want to review the DAG before execution:
 

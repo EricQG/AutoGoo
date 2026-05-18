@@ -28,7 +28,8 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 6. 按优先级解析 wiki 路径：`AUTO_GOO_WIKI_DIR` → `.goo/config.json.wiki_dir` → `~/.auto-goo/config.json.wiki_dir` → `~/workspace/Goo-wiki`。
 7. 检查 `<wiki_dir>/CLAUDE.md` 是否存在。
 8. 写入目标 config，默认结构参考 `skills/auto-goo/templates/config.example.json`。
-9. 展示推荐 SessionStart hooks，但不要自动覆盖 `.claude/settings.json`，除非用户明确要求。
+9. 如果是 `--project` 且 Goo-wiki 可用，必须询问用户是否在项目 `CLAUDE.md` 中加入或更新 AutoGoo marker 包裹的项目归档原则和要求；只改该段，不覆盖用户已有项目指引。非交互场景默认不写，需传 `--update-claude-md` 明确写入；用户传 `--skip-claude-md` 时跳过。
+10. 展示推荐 SessionStart hooks，但不要自动覆盖 `.claude/settings.json`，除非用户明确要求。
 
 ## Phase 0: Wiki 经验召回
 

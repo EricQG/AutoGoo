@@ -16,7 +16,7 @@ description: 初始化 AutoGoo 配置 — 支持用户级 ~/.auto-goo/config.jso
 | 命令 | 写入位置 | 用途 |
 | --- | --- | --- |
 | `/auto-goo:goo-init --user` | `~/.auto-goo/config.json` | 当前用户的全局默认配置，适合统一 wiki 路径和执行偏好 |
-| `/auto-goo:goo-init --project` | `.goo/config.json` | 当前项目的局部覆盖配置，适合特殊 wiki、并发数或归档策略 |
+| `/auto-goo:goo-init --project` | `.goo/config.json`，可选更新 `CLAUDE.md` | 当前项目的局部覆盖配置；Goo-wiki 可用时询问是否写入项目归档原则 |
 | `/auto-goo:goo-init` | 交互提问 | 先询问配置到用户级还是项目级，再继续询问 wiki 路径 |
 
 ## 行为
@@ -57,6 +57,8 @@ if [ ! -f "$SCRIPT" ]; then
 fi
 test -n "$SCRIPT" && bash "$SCRIPT" --user
 test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki
+test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --update-claude-md
+test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --skip-claude-md
 ```
 
 脚本行为：
@@ -71,7 +73,8 @@ test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki
    - 默认 `~/workspace/Goo-wiki`
 5. **检测 Wiki 可用性** — 检查 `<wiki_dir>/CLAUDE.md`
 6. **写入配置** — 生成目标配置文件
-7. **提示 hooks** — 展示推荐的 `.claude/settings.json` SessionStart hooks，由用户决定是否复制/合并
+7. **项目归档原则** — `--project` 且 Goo-wiki 可用时，询问用户是否幂等更新项目 `CLAUDE.md`，加入 Goo-wiki 召回与归档要求；非交互场景默认不写，需传 `--update-claude-md` 明确写入；如需明确跳过，传 `--skip-claude-md`
+8. **提示 hooks** — 展示推荐的 `.claude/settings.json` SessionStart hooks，由用户决定是否复制/合并
 
 ## 默认配置
 
@@ -112,6 +115,7 @@ test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki
 - 不覆盖已有 `.goo/config.json`，除非用户明确确认
 - 不覆盖已有 `~/.auto-goo/config.json`，除非用户明确确认
 - 不删除任何已有 `.goo/` 内容
+- `--project` 且 Goo-wiki 可用时，必须先询问用户是否更新 `CLAUDE.md`；用户同意后只追加或更新由 AutoGoo marker 包裹的归档原则段落，不重写其他内容
 - 不借助 Agent 执行初始化；只运行定位到的 `skills/auto-goo/scripts/goo-init.sh`
 - 用户回答了 `--user` 或 `--project` 后，必须把该参数传给脚本
 - 用户确认或输入 wiki 路径后，必须把 `--wiki-dir <路径>` 传给脚本
