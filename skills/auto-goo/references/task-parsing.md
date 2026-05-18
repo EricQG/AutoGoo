@@ -97,10 +97,36 @@ DAG 结构总结：
       "heartbeat_at": null,
       "started_at": null,
       "completed_at": null
+    },
+    {
+      "id": 2,
+      "tier": 2,
+      "name": "归档到 Goo-wiki",
+      "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
+      "depends_on": [1],
+      "type": "archive",
+      "status": "pending",
+      "progress": 0,
+      "output": "Goo-wiki/wiki/projects/<project-slug>/ 或 .goo/obsidian/<project-slug>/",
+      "agent_id": null,
+      "heartbeat_at": null,
+      "started_at": null,
+      "completed_at": null
     }
   ]
 }
 ```
+
+## 默认 Wiki 归档步骤
+
+所有 plan 默认在 `steps` 末尾追加一个 Wiki 归档任务，除非用户明确禁止归档或配置 `archive.enabled=false`。
+
+- 默认名称：`归档到 Goo-wiki`
+- 默认类型：`type: "archive"`
+- 依赖关系：依赖所有非归档叶子步骤，确保实现、验证、报告等最终交付完成后再归档
+- 输出：Goo-wiki 可用时写入 `Goo-wiki/wiki/projects/<project-slug>/`，不可用时写入 `.goo/obsidian/<project-slug>/`
+- 内容：任务目标、plan 摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验
+- plan-only 模式只把该步骤写入 `.goo/plan.json`，不实际执行归档
 
 ## Plan-only 模式
 
@@ -110,6 +136,7 @@ DAG 结构总结：
 - 写入 `.goo/plan.json`
 - 填充 `wiki_context`
 - 每个步骤包含 `output`，便于后续恢复和验收
+- 最后一步包含默认 Wiki 归档任务，依赖所有非归档叶子步骤
 - 展示简洁计划摘要、并行组、关键风险、需要用户确认的点
 - 不修改业务文件，不运行实现命令，不启动优化循环
 

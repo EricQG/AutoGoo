@@ -13,8 +13,9 @@ description: 只生成 AutoGoo 执行计划 — 召回 Goo-wiki 经验并输出 
 2. **输入形态识别** — 判断输入是普通任务、Markdown 任务包、已有 plan、issue/PR 描述还是日志片段
 3. **任务解析** — 将任务拆解为 DAG 步骤
 4. **上下文注入** — 把可复用经验写入 `wiki_context`
-5. **计划落盘** — 输出或更新 `.goo/plan.json`
-6. **等待确认** — 不派发 Subagent，不执行文件修改
+5. **归档任务补齐** — 默认在 DAG 最后追加 Wiki 归档步骤，依赖所有最终交付步骤
+6. **计划落盘** — 输出或更新 `.goo/plan.json`
+7. **等待确认** — 不派发 Subagent，不执行文件修改
 
 ## Markdown 任务输入
 
@@ -46,6 +47,7 @@ description: 只生成 AutoGoo 执行计划 — 召回 Goo-wiki 经验并输出 
 
 - `.goo/plan.json` 必须包含 `wiki_context`
 - 每个步骤必须包含 `output`，便于后续 `/auto-goo:goo-continue` 恢复
+- `steps` 最后必须包含 Wiki 归档任务，默认名称为 `归档到 Goo-wiki`，依赖所有非归档叶子步骤
 - 如果没有找到相关 wiki 经验，写入 `wiki_context.found=false`
 - 最终向用户展示简洁计划摘要和主要风险
 

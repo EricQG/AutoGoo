@@ -59,7 +59,8 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 5. 逆向拆解 — 从目标倒推，追问到"不可再分"的原子步骤。如果任务本身就是单步的（如"把这个文件转成 PDF"），直接执行，不走此流程。
 6. 标注依赖关系 — 识别前置条件，推导拓扑顺序。原始数据准备 → 处理 → 输出，每一步依赖前一步的输出。
 7. 识别优化标记 — 含"性能、速度、延迟、吞吐、效率、内存、GPU、耗时"关键词 → 标记 `type: "optimize"`
-8. 输出 `.goo/plan.json`
+8. 追加默认归档步骤 — DAG 最后必须有 `归档到 Goo-wiki`，依赖所有非归档叶子步骤；除非用户明确禁止归档或配置 `archive.enabled=false`
+9. 输出 `.goo/plan.json`
 
 ### 步骤粒度原则
 
@@ -94,6 +95,14 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
       "description": "<做什么>",
       "depends_on": [],
       "type": "exec"
+    },
+    {
+      "id": 2,
+      "tier": 2,
+      "name": "归档到 Goo-wiki",
+      "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
+      "depends_on": [1],
+      "type": "archive"
     }
   ]
 }
