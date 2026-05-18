@@ -57,6 +57,7 @@ if [ ! -f "$SCRIPT" ]; then
 fi
 test -n "$SCRIPT" && bash "$SCRIPT" --user
 test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki
+test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --project-slug my-project
 test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --update-claude-md
 test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --skip-claude-md
 ```
@@ -71,10 +72,11 @@ test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --
    - 项目级 `.goo/config.json` 的 `wiki_dir`
    - 用户级 `~/.auto-goo/config.json` 的 `wiki_dir`
    - 默认 `~/workspace/Goo-wiki`
-5. **检测 Wiki 可用性** — 检查 `<wiki_dir>/CLAUDE.md`
-6. **写入配置** — 生成目标配置文件
-7. **项目归档原则** — `--project` 且 Goo-wiki 可用时，询问用户是否幂等更新项目 `CLAUDE.md`，加入 Goo-wiki 召回与归档要求；非交互场景默认不写，需传 `--update-claude-md` 明确写入；如需明确跳过，传 `--skip-claude-md`
-8. **提示 hooks** — 展示推荐的 `.claude/settings.json` SessionStart hooks，由用户决定是否复制/合并
+5. **确定项目归档根路径** — `--project` 时默认用项目根目录名生成 `project_slug`，也可传 `--project-slug <slug>`；Goo-wiki 可用时创建 `<wiki_dir>/wiki/projects/<project_slug>/`
+6. **检测 Wiki 可用性** — 检查 `<wiki_dir>/CLAUDE.md`
+7. **写入配置** — 生成目标配置文件；项目级配置写入 `archive.project_slug`、`archive.project_dir` 和 `archive.fallback_project_dir`
+8. **项目归档原则** — `--project` 且 Goo-wiki 可用时，询问用户是否幂等更新项目 `CLAUDE.md`，加入 Goo-wiki 召回与归档要求；非交互场景默认不写，需传 `--update-claude-md` 明确写入；如需明确跳过，传 `--skip-claude-md`
+9. **提示 hooks** — 展示推荐的 `.claude/settings.json` SessionStart hooks，由用户决定是否复制/合并
 
 ## 默认配置
 
@@ -92,7 +94,10 @@ test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --
   },
   "archive": {
     "enabled": true,
-    "fallback_dir": ".goo/obsidian"
+    "fallback_dir": ".goo/obsidian",
+    "project_slug": "<project-slug>",
+    "project_dir": "wiki/projects/<project-slug>",
+    "fallback_project_dir": ".goo/obsidian/<project-slug>"
   },
   "execution": {
     "max_concurrent": 6,
@@ -115,6 +120,7 @@ test -n "$SCRIPT" && bash "$SCRIPT" --project --wiki-dir ~/workspace/Goo-wiki --
 - 不覆盖已有 `.goo/config.json`，除非用户明确确认
 - 不覆盖已有 `~/.auto-goo/config.json`，除非用户明确确认
 - 不删除任何已有 `.goo/` 内容
+- `--project` 且 Goo-wiki 可用时，必须创建或复用 `<wiki_dir>/wiki/projects/<project_slug>/` 作为项目归档根路径
 - `--project` 且 Goo-wiki 可用时，必须先询问用户是否更新 `CLAUDE.md`；用户同意后只追加或更新由 AutoGoo marker 包裹的归档原则段落，不重写其他内容
 - 不借助 Agent 执行初始化；只运行定位到的 `skills/auto-goo/scripts/goo-init.sh`
 - 用户回答了 `--user` 或 `--project` 后，必须把该参数传给脚本

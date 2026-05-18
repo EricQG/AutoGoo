@@ -15,8 +15,23 @@ TASK="$1"
 COUNT="${2:-1}"
 TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+PLAN_FILE="$PROJECT_ROOT/.goo/plan.json"
+PLAN_HISTORY_DIR="$PROJECT_ROOT/.goo/plans/history"
 
 mkdir -p "$PROJECT_ROOT/.goo"
+
+if [ -f "$PLAN_FILE" ]; then
+  mkdir -p "$PLAN_HISTORY_DIR"
+  ARCHIVE_TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
+  ARCHIVE_FILE="$PLAN_HISTORY_DIR/plan-$ARCHIVE_TIMESTAMP.json"
+  ARCHIVE_INDEX=1
+  while [ -e "$ARCHIVE_FILE" ]; do
+    ARCHIVE_FILE="$PLAN_HISTORY_DIR/plan-$ARCHIVE_TIMESTAMP-$ARCHIVE_INDEX.json"
+    ARCHIVE_INDEX=$((ARCHIVE_INDEX + 1))
+  done
+  cp "$PLAN_FILE" "$ARCHIVE_FILE"
+  echo "✓ previous plan archived at $ARCHIVE_FILE"
+fi
 
 # Build steps JSON. AutoGoo plans always end with a wiki archive step by
 # default, so goo-start/goo-continue can preserve lessons after execution.
@@ -27,7 +42,7 @@ for i in $(seq 1 "$COUNT"); do
   else
     DEPS="[$((i-1))]"
   fi
-  STEP="    { \"id\": $i, \"tier\": 1, \"name\": \"步骤$i\", \"description\": \"步骤$i 描述\", \"depends_on\": $DEPS, \"type\": \"exec\" }"
+  STEP="    { \"id\": $i, \"tier\": 1, \"name\": \"步骤$i\", \"description\": \"步骤$i 描述\", \"depends_on\": $DEPS, \"type\": \"exec\", \"subagent\": \"implementer\" }"
   if [ -z "$STEPS" ]; then
     STEPS="$STEP"
   else
@@ -39,18 +54,31 @@ done
 ARCHIVE_ID=$((COUNT + 1))
 ARCHIVE_TIER=$((COUNT + 1))
 ARCHIVE_DEPS="[$COUNT]"
-ARCHIVE_STEP="    { \"id\": $ARCHIVE_ID, \"tier\": $ARCHIVE_TIER, \"name\": \"归档到 Goo-wiki\", \"description\": \"将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback\", \"depends_on\": $ARCHIVE_DEPS, \"type\": \"archive\" }"
+ARCHIVE_STEP="    { \"id\": $ARCHIVE_ID, \"tier\": $ARCHIVE_TIER, \"name\": \"归档到 Goo-wiki\", \"description\": \"将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback\", \"depends_on\": $ARCHIVE_DEPS, \"type\": \"archive\", \"subagent\": \"recorder\" }"
 STEPS="$STEPS,
 $ARCHIVE_STEP"
 
-cat > "$PROJECT_ROOT/.goo/plan.json" << EOF
+cat > "$PLAN_FILE" << EOF
 {
   "task": "$TASK",
   "created_at": "$TIMESTAMP",
+  "wiki_context": {
+    "found": false,
+    "sources": [],
+    "reused_knowledge": []
+  },
+  "context_digest": {
+    "found": false,
+    "decisions": [],
+    "constraints": [],
+    "acceptance_criteria": [],
+    "open_questions": []
+  },
+  "context_artifacts": [],
   "steps": [
 $STEPS
   ]
 }
 EOF
 
-echo "✓ plan.json created at $PROJECT_ROOT/.goo/plan.json ($COUNT steps + wiki archive)"
+echo "✓ plan.json created at $PLAN_FILE ($COUNT steps + wiki archive)"

@@ -1,59 +1,127 @@
 <svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">AutoGoo workflow</title>
-  <desc id="desc">A wiki-grounded workflow from task request to Goo-wiki recall, DAG plan, parallel agents, optimization, archive, and improvement.</desc>
-  <rect width="1200" height="520" rx="28" fill="#0F172A"/>
-  <rect x="36" y="36" width="1128" height="448" rx="24" fill="#111827" stroke="#334155" stroke-width="2"/>
-  <text x="72" y="96" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">AutoGoo</text>
-  <text x="72" y="132" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Wiki-grounded DAG automation for Claude Code workflows</text>
+  <desc id="desc">A futuristic wiki-grounded workflow from task request to Goo-wiki recall, plan, execution, archive, and self-improvement.</desc>
 
   <defs>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2 2L10 6L2 10V2Z" fill="#38BDF8"/>
-    </marker>
-    <linearGradient id="card" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#1E293B"/>
-      <stop offset="1" stop-color="#0F172A"/>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#020617"/>
+      <stop offset="0.52" stop-color="#07111F"/>
+      <stop offset="1" stop-color="#111827"/>
     </linearGradient>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0F253E" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#08111F" stop-opacity="0.94"/>
+    </linearGradient>
+    <linearGradient id="cyanLine" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="loopLine" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="0.5" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <radialGradient id="coreGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.32"/>
+      <stop offset="0.5" stop-color="#312E81" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" stroke="#1E3A5F" stroke-width="1" stroke-opacity="0.5"/>
+      <path d="M20 0V40M0 20H40" stroke="#164E63" stroke-width="0.5" stroke-opacity="0.28"/>
+    </pattern>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.2 0 0 0 0 0.85 0 0 0 0 1 0 0 0 0.9 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#020617" flood-opacity="0.55"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2 2L10 6L2 10V2Z" fill="#67E8F9"/>
+    </marker>
   </defs>
 
+  <rect width="1200" height="520" rx="28" fill="url(#bg)"/>
+  <rect width="1200" height="520" fill="url(#grid)" opacity="0.72"/>
+  <rect x="90" y="44" width="1020" height="400" fill="url(#coreGlow)"/>
+  <path d="M74 116H235M964 116H1126M82 420H224M972 420H1118" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" opacity="0.38"/>
+
   <g font-family="Inter, Arial, sans-serif">
-    <rect x="72" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#64748B"/>
-    <text x="98" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Request</text>
-    <text x="98" y="270" fill="#CBD5E1" font-size="15">Natural language</text>
-    <text x="98" y="294" fill="#CBD5E1" font-size="15">task intent</text>
+    <text x="72" y="92" fill="#F8FAFC" font-size="42" font-weight="800" letter-spacing="0">AutoGoo</text>
+    <text x="72" y="126" fill="#A5F3FC" font-size="18">Wiki-grounded DAG automation for Claude Code workflows</text>
+    <text x="920" y="88" fill="#67E8F9" font-size="14" font-weight="700">PLAN / EXECUTE / ARCHIVE</text>
+    <text x="920" y="112" fill="#94A3B8" font-size="13">context survives outside chat</text>
+  </g>
 
-    <rect x="292" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#38BDF8"/>
-    <text x="318" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Recall</text>
-    <text x="318" y="270" fill="#CBD5E1" font-size="15">Goo-wiki notes</text>
-    <text x="318" y="294" fill="#CBD5E1" font-size="15">and lessons</text>
+  <g filter="url(#glow)" opacity="0.85">
+    <path d="M206 255H315" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M426 255H535" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M646 255H755" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M866 255H975" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M1046 332C1046 420 154 420 154 332" stroke="url(#loopLine)" stroke-width="3" stroke-dasharray="10 12" marker-end="url(#arrow)"/>
+  </g>
 
-    <rect x="512" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#22C55E"/>
-    <text x="538" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Plan</text>
-    <text x="538" y="270" fill="#CBD5E1" font-size="15">DAG steps</text>
-    <text x="538" y="294" fill="#CBD5E1" font-size="15">in .goo/plan.json</text>
+  <g font-family="Inter, Arial, sans-serif" filter="url(#softShadow)">
+    <g>
+      <rect x="72" y="180" width="156" height="150" rx="18" fill="url(#panel)" stroke="#334155" stroke-width="1.5"/>
+      <path d="M94 212H134M94 234H160M94 256H146" stroke="#67E8F9" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="184" cy="218" r="17" fill="#0E7490" fill-opacity="0.42" stroke="#67E8F9"/>
+      <text x="94" y="292" fill="#F8FAFC" font-size="21" font-weight="800">Request</text>
+      <text x="94" y="315" fill="#CBD5E1" font-size="14">intent + constraints</text>
+    </g>
 
-    <rect x="732" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#F59E0B"/>
-    <text x="758" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Execute</text>
-    <text x="758" y="270" fill="#CBD5E1" font-size="15">Parallel agents</text>
-    <text x="758" y="294" fill="#CBD5E1" font-size="15">and benchmarks</text>
+    <g>
+      <rect x="292" y="180" width="156" height="150" rx="18" fill="url(#panel)" stroke="#22D3EE" stroke-width="1.5"/>
+      <path d="M342 222C342 204 398 204 398 222V258C398 276 342 276 342 258V222Z" stroke="#67E8F9" stroke-width="3"/>
+      <path d="M342 222C342 240 398 240 398 222M342 240C342 258 398 258 398 240" stroke="#67E8F9" stroke-width="2" opacity="0.78"/>
+      <text x="314" y="292" fill="#F8FAFC" font-size="21" font-weight="800">Recall</text>
+      <text x="314" y="315" fill="#CBD5E1" font-size="14">Goo-wiki memory</text>
+    </g>
 
-    <rect x="952" y="196" width="172" height="132" rx="14" fill="url(#card)" stroke="#A78BFA"/>
-    <text x="978" y="238" fill="#F8FAFC" font-size="22" font-weight="700">Archive</text>
-    <text x="978" y="270" fill="#CBD5E1" font-size="15">Decisions and</text>
-    <text x="978" y="294" fill="#CBD5E1" font-size="15">lessons to wiki</text>
+    <g>
+      <rect x="512" y="180" width="156" height="150" rx="18" fill="url(#panel)" stroke="#34D399" stroke-width="1.5"/>
+      <circle cx="560" cy="230" r="13" fill="#064E3B" stroke="#6EE7B7" stroke-width="3"/>
+      <circle cx="620" cy="230" r="13" fill="#064E3B" stroke="#6EE7B7" stroke-width="3"/>
+      <circle cx="590" cy="265" r="13" fill="#064E3B" stroke="#6EE7B7" stroke-width="3"/>
+      <path d="M573 232H607M568 241L580 254M612 241L600 254" stroke="#6EE7B7" stroke-width="3" stroke-linecap="round"/>
+      <text x="534" y="292" fill="#F8FAFC" font-size="21" font-weight="800">Plan</text>
+      <text x="534" y="315" fill="#CBD5E1" font-size="14">DAG + context</text>
+    </g>
 
-    <path d="M244 262H288" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
-    <path d="M464 262H508" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
-    <path d="M684 262H728" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
-    <path d="M904 262H948" stroke="#38BDF8" stroke-width="4" marker-end="url(#arrow)"/>
+    <g>
+      <rect x="732" y="180" width="156" height="150" rx="18" fill="url(#panel)" stroke="#FBBF24" stroke-width="1.5"/>
+      <rect x="774" y="215" width="28" height="28" rx="7" fill="#78350F" stroke="#FCD34D" stroke-width="2"/>
+      <rect x="820" y="215" width="28" height="28" rx="7" fill="#78350F" stroke="#FCD34D" stroke-width="2"/>
+      <rect x="797" y="260" width="28" height="28" rx="7" fill="#78350F" stroke="#FCD34D" stroke-width="2"/>
+      <path d="M802 229H820M788 243L800 260M834 243L822 260" stroke="#FCD34D" stroke-width="3" stroke-linecap="round"/>
+      <text x="754" y="292" fill="#F8FAFC" font-size="21" font-weight="800">Execute</text>
+      <text x="754" y="315" fill="#CBD5E1" font-size="14">parallel agents</text>
+    </g>
 
-    <path d="M1038 342C1038 420 158 420 158 342" stroke="#64748B" stroke-width="3" stroke-dasharray="8 10" marker-end="url(#arrow)"/>
-    <text x="438" y="404" fill="#CBD5E1" font-size="16">wiki memory and self-improvement loop</text>
+    <g>
+      <rect x="952" y="180" width="156" height="150" rx="18" fill="url(#panel)" stroke="#A78BFA" stroke-width="1.5"/>
+      <path d="M990 218H1068V280H990V218Z" stroke="#C4B5FD" stroke-width="3"/>
+      <path d="M1004 236H1054M1004 252H1042M1004 268H1060" stroke="#C4B5FD" stroke-width="3" stroke-linecap="round"/>
+      <path d="M1076 229L1090 216M1077 248H1096M1076 267L1090 280" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
+      <text x="974" y="292" fill="#F8FAFC" font-size="21" font-weight="800">Archive</text>
+      <text x="974" y="315" fill="#CBD5E1" font-size="14">lessons to wiki</text>
+    </g>
+  </g>
 
-    <rect x="72" y="360" width="220" height="48" rx="12" fill="#082F49" stroke="#075985"/>
-    <text x="94" y="390" fill="#BAE6FD" font-size="16">/auto-goo:goo-start</text>
-
-    <rect x="904" y="360" width="220" height="48" rx="12" fill="#312E81" stroke="#4F46E5"/>
-    <text x="926" y="390" fill="#DDD6FE" font-size="16">/auto-goo:goo-improve</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="70" y="360" width="250" height="54" rx="16" fill="#062A3C" fill-opacity="0.86" stroke="#0891B2"/>
+    <text x="94" y="393" fill="#A5F3FC" font-size="16" font-weight="700">/auto-goo:goo-start</text>
+    <rect x="474" y="358" width="252" height="58" rx="18" fill="#052E2B" fill-opacity="0.84" stroke="#22C55E"/>
+    <text x="500" y="382" fill="#BBF7D0" font-size="15" font-weight="700">plan.json + wiki context</text>
+    <text x="500" y="404" fill="#86EFAC" font-size="13">no hidden chat dependency</text>
+    <rect x="880" y="360" width="250" height="54" rx="16" fill="#25115A" fill-opacity="0.84" stroke="#8B5CF6"/>
+    <text x="905" y="393" fill="#DDD6FE" font-size="16" font-weight="700">/auto-goo:goo-improve</text>
+    <text x="426" y="458" fill="#94A3B8" font-size="15">feedback loop: recall prior knowledge, execute from durable plan, archive new lessons</text>
   </g>
 </svg>

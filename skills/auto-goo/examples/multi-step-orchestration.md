@@ -17,7 +17,8 @@
       "name": "数据提取",
       "description": "读取 CSV 文件，验证列名和数据完整性",
       "depends_on": [],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 2,
@@ -25,7 +26,8 @@
       "name": "数据清洗",
       "description": "处理缺失值、去重、类型转换",
       "depends_on": [1],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 3,
@@ -33,7 +35,8 @@
       "name": "统计分析",
       "description": "计算均值、中位数、标准差等统计指标",
       "depends_on": [2],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 4,
@@ -41,7 +44,8 @@
       "name": "可视化生成",
       "description": "生成分布图、箱线图、趋势图",
       "depends_on": [2],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 5,
@@ -49,7 +53,8 @@
       "name": "汇总报告",
       "description": "合并统计结果和图表为最终报告",
       "depends_on": [3, 4],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     }
   ]
 }

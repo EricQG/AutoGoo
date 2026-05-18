@@ -11,7 +11,8 @@
   },
   "archive": {
     "enabled": true,
-    "fallback_dir": ".goo/obsidian"
+    "fallback_dir": ".goo/obsidian",
+    "plan_history_dir": ".goo/plans/history"
   },
   "execution": {
     "max_concurrent": 6,

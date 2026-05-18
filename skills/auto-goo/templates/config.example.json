@@ -11,7 +11,11 @@
   },
   "archive": {
     "enabled": true,
-    "fallback_dir": ".goo/obsidian"
+    "fallback_dir": ".goo/obsidian",
+    "plan_history_dir": ".goo/plans/history",
+    "project_slug": "<project-slug>",
+    "project_dir": "wiki/projects/<project-slug>",
+    "fallback_project_dir": ".goo/obsidian/<project-slug>"
   },
   "execution": {
     "max_concurrent": 6,

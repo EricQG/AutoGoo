@@ -12,9 +12,9 @@
 
 | ID | 步骤 | 依赖 | 类型 |
 |----|------|------|------|
-| 1 | 数据加载与清洗 | — | exec |
-| 2 | 地区汇总统计 | 1 | exec |
-| 3 | 生成可视化报告 | 2 | exec |
+| 1 | 数据加载与清洗 | — | exec / implementer |
+| 2 | 地区汇总统计 | 1 | exec / implementer |
+| 3 | 生成可视化报告 | 2 | exec / implementer |
 
 ## plan.json
 
@@ -29,7 +29,8 @@
       "name": "数据加载与清洗",
       "description": "读取 CSV 文件，处理缺失值，统一日期格式",
       "depends_on": [],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 2,
@@ -37,7 +38,8 @@
       "name": "地区汇总统计",
       "description": "按地区分组计算销售额总和、平均值、订单数",
       "depends_on": [1],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     },
     {
       "id": 3,
@@ -45,7 +47,8 @@
       "name": "生成可视化报告",
       "description": "用 matplotlib 生成柱状图 + 汇总表格 [dep: matplotlib]",
       "depends_on": [2],
-      "type": "exec"
+      "type": "exec",
+      "subagent": "implementer"
     }
   ]
 }

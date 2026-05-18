@@ -104,7 +104,7 @@ fi
 echo ""
 echo "── 6. 脚本文件 ──"
 
-SCRIPTS=("goo-init.sh" "init-plan.sh" "check-plugin.sh")
+SCRIPTS=("goo-init.sh" "init-plan.sh" "goo-status.py" "update-step.py" "check-plugin.sh")
 for s in "${SCRIPTS[@]}"; do
   f="$ROOT/skills/auto-goo/scripts/$s"
   if [[ -f "$f" ]]; then

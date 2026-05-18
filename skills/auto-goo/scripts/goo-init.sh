@@ -5,12 +5,14 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  goo-init.sh [--user|--project] [--wiki-dir PATH] [--yes] [--force] [--update-claude-md] [--skip-claude-md]
+  goo-init.sh [--user|--project] [--wiki-dir PATH] [--project-slug SLUG] [--yes] [--force] [--update-claude-md] [--skip-claude-md]
 
 Options:
   --user            Write user-level config to ~/.auto-goo/config.json
   --project         Write project-level config to .goo/config.json
   --wiki-dir PATH   Set Goo-wiki directory (default: ~/workspace/Goo-wiki)
+  --project-slug SLUG
+                    Set Goo-wiki project archive folder name (default: project directory name)
   --yes             Use defaults for unanswered prompts
   --force           Overwrite existing config without asking
   --update-claude-md
@@ -23,6 +25,7 @@ EOF
 SCOPE=""
 WIKI_DIR="${AUTO_GOO_WIKI_DIR:-}"
 WIKI_DIR_PROVIDED=0
+PROJECT_SLUG=""
 YES=0
 FORCE=0
 UPDATE_CLAUDE_MD=0
@@ -45,6 +48,14 @@ while [[ $# -gt 0 ]]; do
       fi
       WIKI_DIR="$2"
       WIKI_DIR_PROVIDED=1
+      shift 2
+      ;;
+    --project-slug)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --project-slug requires a value" >&2
+        exit 2
+      fi
+      PROJECT_SLUG="$2"
       shift 2
       ;;
     --yes|-y)
@@ -128,6 +139,17 @@ project_root() {
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+default_project_slug() {
+  local root="$1"
+  local raw
+  raw="$(basename "$root")"
+  raw="$(printf '%s\n' "$raw" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-+/-/g')"
+  if [[ -z "$raw" ]]; then
+    raw="project"
+  fi
+  printf '%s\n' "$raw"
+}
+
 if [[ -z "$SCOPE" ]]; then
   if [[ ! -t 0 ]]; then
     echo "error: cannot choose init scope in non-interactive mode" >&2
@@ -170,12 +192,27 @@ fi
 
 WIKI_DIR_EXPANDED="$(expand_path "$WIKI_DIR")"
 WIKI_READY=0
+PROJECT_ARCHIVE_DIR=""
+FALLBACK_PROJECT_ARCHIVE_DIR=""
+
+if [[ "$SCOPE" == "project" ]]; then
+  DEFAULT_PROJECT_SLUG="$(default_project_slug "$ROOT")"
+  if [[ -z "$PROJECT_SLUG" ]]; then
+    PROJECT_SLUG="$(prompt "Goo-wiki project archive slug" "$DEFAULT_PROJECT_SLUG")"
+  fi
+  PROJECT_SLUG="$(default_project_slug "$PROJECT_SLUG")"
+  PROJECT_ARCHIVE_DIR="wiki/projects/$PROJECT_SLUG"
+  FALLBACK_PROJECT_ARCHIVE_DIR="$FALLBACK_DIR/$PROJECT_SLUG"
+fi
 
 echo ""
 echo "AutoGoo init"
 echo "  scope:      $SCOPE"
 echo "  config:     $CONFIG_FILE"
 echo "  wiki_dir:   $WIKI_DIR"
+if [[ "$SCOPE" == "project" ]]; then
+  echo "  project:    $PROJECT_SLUG"
+fi
 
 if [[ -f "$WIKI_DIR_EXPANDED/CLAUDE.md" ]]; then
   WIKI_READY=1
@@ -195,9 +232,14 @@ if [[ -f "$CONFIG_FILE" && "$FORCE" -ne 1 ]]; then
   fi
 fi
 
+if [[ "$SCOPE" == "project" && "$WIKI_READY" -eq 1 ]]; then
+  mkdir -p "$WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR"
+  echo "  archive root: $WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR"
+fi
+
 mkdir -p "$CONFIG_DIR"
 
-python3 - "$CONFIG_FILE" "$WIKI_DIR" "$FALLBACK_DIR" <<'PY'
+python3 - "$CONFIG_FILE" "$WIKI_DIR" "$FALLBACK_DIR" "$PROJECT_SLUG" "$PROJECT_ARCHIVE_DIR" "$FALLBACK_PROJECT_ARCHIVE_DIR" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -205,6 +247,9 @@ from pathlib import Path
 target = Path(sys.argv[1])
 wiki_dir = sys.argv[2]
 fallback_dir = sys.argv[3]
+project_slug = sys.argv[4]
+project_archive_dir = sys.argv[5]
+fallback_project_archive_dir = sys.argv[6]
 
 config = {
     "version": 1,
@@ -220,6 +265,7 @@ config = {
     "archive": {
         "enabled": True,
         "fallback_dir": fallback_dir,
+        "plan_history_dir": ".goo/plans/history",
     },
     "execution": {
         "max_concurrent": 6,
@@ -235,6 +281,11 @@ config = {
         "prompt_for_wiki_dir": True,
     },
 }
+
+if project_slug:
+    config["archive"]["project_slug"] = project_slug
+    config["archive"]["project_dir"] = project_archive_dir
+    config["archive"]["fallback_project_dir"] = fallback_project_archive_dir
 
 target.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
@@ -256,13 +307,14 @@ if [[ "$SCOPE" == "project" && "$WIKI_READY" -eq 1 && "$SKIP_CLAUDE_MD" -ne 1 ]]
   fi
 
   if [[ "$SHOULD_UPDATE_CLAUDE_MD" -eq 1 ]]; then
-    python3 - "$PROJECT_CLAUDE_MD" "$WIKI_DIR" "$FALLBACK_DIR" <<'PY'
+    python3 - "$PROJECT_CLAUDE_MD" "$WIKI_DIR" "$FALLBACK_PROJECT_ARCHIVE_DIR" "$PROJECT_ARCHIVE_DIR" <<'PY'
 import sys
 from pathlib import Path
 
 target = Path(sys.argv[1])
 wiki_dir = sys.argv[2]
-fallback_dir = sys.argv[3]
+fallback_project_dir = sys.argv[3]
+project_archive_dir = sys.argv[4]
 
 begin = "<!-- AUTO-GOO-WIKI-ARCHIVE-BEGIN -->"
 end = "<!-- AUTO-GOO-WIKI-ARCHIVE-END -->"
@@ -272,7 +324,7 @@ block = f"""{begin}
 - 本项目启用 Goo-wiki 作为项目记忆层；规划前先检索 `{wiki_dir}` 中相关项目页、概念页、周报和 `log.md`，复用已有约束、命令、路径、指标口径和历史经验。
 - 使用 `/auto-goo:goo-plan` 生成计划时，必须在 `.goo/plan.json` 最后保留 `归档到 Goo-wiki` 步骤，并依赖所有非归档叶子步骤。
 - 使用 `/auto-goo:goo-start` 或 `/auto-goo:goo-continue` 执行后，必须归档任务目标、计划摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验。
-- Goo-wiki 可用时优先写入 `Goo-wiki/wiki/projects/<project-slug>/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_dir}` 作为本地 fallback。
+- Goo-wiki 可用时优先写入 `{wiki_dir}/{project_archive_dir}/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_project_dir}` 作为本地 fallback。
 - 不把归档当作事后报告；归档内容要能支撑下一次任务的召回、规划和复用。
 {end}
 """

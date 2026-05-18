@@ -1,159 +1,156 @@
 # AutoGoo
 
-[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](#release)
+[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](#版本)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-black)](#installation)
-[![Status](https://img.shields.io/badge/status-preview-orange)](#release)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-black)](#安装)
+[![Status](https://img.shields.io/badge/status-preview-orange)](#版本)
 
-AutoGoo is a Claude Code plugin that turns an open-ended request into a traceable,
-wiki-grounded multi-agent workflow: reuse prior project knowledge from Goo-wiki,
-plan the task as a DAG, execute independent steps in parallel, run optional
-optimization loops, and archive the new experience back into the wiki.
+AutoGoo 是一个 Claude Code 插件，用于把开放式任务转成可追踪、可恢复、可归档的多 Agent 工作流。它会先从 Goo-wiki 召回已有项目知识，再把任务规划成 DAG，按依赖关系并行执行独立步骤，在需要时加入评测和优化循环，最后把新的经验归档回 Goo-wiki。
 
-![AutoGoo workflow](docs/assets/autogoo-workflow.svg)
+![AutoGoo 工作流](docs/assets/autogoo-workflow.svg)
 
-## Highlights
+## 亮点
 
-- **DAG-first planning**: decomposes multi-step tasks into explicit dependencies before execution.
-- **Structured Markdown intake**: treats README files, TODO lists, issue templates, and design docs as task carriers instead of generic text-processing jobs.
-- **Wiki-grounded context**: reads existing Goo-wiki project notes, concepts, weekly reviews, and prior decisions before planning.
-- **Parallel execution**: dispatches dependency-free steps to subagents instead of running everything serially.
-- **Optimization loop**: detects performance-oriented tasks and adds benchmark, baseline, profiling, and comparison stages.
-- **Durable knowledge archive**: writes task summaries, step evidence, metrics, decisions, and lessons back into Goo-wiki.
-- **Self-improving workflow**: collects friction points and routes them into `/auto-goo:goo-improve`.
-- **Namespaced commands**: exposes plugin commands as `/auto-goo:goo-*`, keeping the slash-command list tidy.
+- **DAG 优先规划**：执行前先把多步骤任务拆成明确依赖关系。
+- **结构化 Markdown 输入**：把 README、TODO、issue 模板和设计文档当作任务载体，而不是默认当作普通文本处理。
+- **对话方案沉淀**：把聊天中形成的方案、取舍、约束和验收标准写入 plan 或 Markdown，避免执行阶段依赖上下文记忆。
+- **Goo-wiki 经验召回**：规划前读取已有项目页、概念页、周报和历史决策。
+- **并行执行**：把无依赖冲突的步骤派发给隔离上下文的 subagent。
+- **主 Agent 把关**：主 Agent 负责规划、上下文裁剪、调度、审查、冲突处理和最终验收；subagent 只执行被分配的步骤。
+- **优化循环**：识别性能类任务，加入 benchmark、baseline、profiling 和优化对比。
+- **持久知识归档**：把任务摘要、步骤证据、指标、决策和经验写回 Goo-wiki。
+- **自改进工作流**：收集执行摩擦点，并通过 `/auto-goo:goo-improve` 进入插件优化流程。
+- **命名空间命令**：所有 slash command 使用 `/auto-goo:goo-*`，避免污染命令列表。
 
-## Installation
+## 安装
 
-Install directly from GitHub:
+从 GitHub 直接安装：
 
 ```bash
 cc --plugin git+https://github.com/ZixiGu/AutoGoo.git
 ```
 
-Or install from a local checkout:
+或从本地 checkout 安装：
 
 ```bash
 cc --plugin-dir /path/to/AutoGoo
 ```
 
-Verify the plugin structure after installation:
+安装后检查插件结构：
 
 ```bash
 bash /path/to/AutoGoo/skills/auto-goo/scripts/check-plugin.sh
 ```
 
-## Quick Start
+## 快速开始
 
-Initialize AutoGoo once for your user account, then optionally per project:
+先初始化用户级配置，再按需为具体项目初始化项目级配置：
 
 ```text
 /auto-goo:goo-init --user
 /auto-goo:goo-init --project
 ```
 
-`goo-init` is backed by a local interactive script. It asks for scope and wiki path, offers `~/workspace/Goo-wiki` as the default, and writes config directly without delegating to an agent. When project-level init uses an available Goo-wiki vault, it asks whether to add Goo-wiki recall and archive requirements to the project's `CLAUDE.md` with an idempotent AutoGoo marker block.
+`goo-init` 由本地交互脚本驱动。它会询问配置作用域和 Goo-wiki 路径，默认提供 `~/workspace/Goo-wiki`，并直接写入配置文件，不派发 Agent。项目级初始化使用可用的 Goo-wiki vault 时，会创建项目归档根目录，并询问是否把 Goo-wiki 召回与归档要求写入项目 `CLAUDE.md` 的 AutoGoo marker 块。
 
-Draft a plan first when you want to review the DAG before execution:
-
-```text
-/auto-goo:goo-plan Summarize this CSV by region and generate a short report.
-```
-
-Start a full workflow from any Claude Code session:
+只想先审阅 DAG，不立即执行时：
 
 ```text
-/auto-goo:goo-start Summarize this CSV by region and generate a short report.
+/auto-goo:goo-plan 按地区汇总这份 CSV，并生成一份简短报告
 ```
 
-Chinese task descriptions work naturally:
+从任意 Claude Code 会话启动完整工作流：
 
 ```text
-/auto-goo:goo-start 把这份 CSV 数据按地区汇总，生成报告
+/auto-goo:goo-start 按地区汇总这份 CSV，并生成一份简短报告
 ```
 
-AutoGoo will:
+AutoGoo 会：
 
-1. detect the Goo-wiki vault and collect relevant prior project knowledge,
-2. parse the request into a `.goo/plan.json` DAG,
-3. execute ready steps with parallel subagents,
-4. run benchmark and optimization loops when needed,
-5. archive logs, decisions, metrics, and lessons back into wiki notes,
-6. collect workflow issues for future improvement.
+1. 检测 Goo-wiki vault，并召回相关项目经验。
+2. 把请求解析成 `.goo/plan.json` DAG。
+3. 使用并行 subagent 执行就绪步骤。
+4. 在需要时运行 benchmark 和优化循环。
+5. 把日志、决策、指标和经验归档回 wiki 笔记。
+6. 收集流程问题，供后续自改进。
 
-## Commands
+## 命令
 
-| Command | Purpose |
+| 命令 | 用途 |
 | --- | --- |
-| `/auto-goo:goo-init --user` | Create `~/.auto-goo/config.json` for user-level defaults. |
-| `/auto-goo:goo-init --project` | Create `.goo/config.json` for project-level overrides. |
-| `/auto-goo:goo-plan <task>` | Recall wiki context and generate `.goo/plan.json` without executing it. |
-| `/auto-goo:goo-start <task>` | Start a full AutoGoo workflow. |
-| `/auto-goo:goo-status` | Render the current `.goo/plan.json` progress dashboard. |
-| `/auto-goo:goo-continue` | Resume an interrupted workflow with status, artifact, and heartbeat checks. |
-| `/auto-goo:goo-benchmark` | Run metric discovery, baseline measurement, profiling, optimization, and comparison. |
-| `/auto-goo:goo-improve` | Review recent workflow friction and generate plugin improvement suggestions. |
+| `/auto-goo:goo-init --user` | 创建用户级默认配置 `~/.auto-goo/config.json`。 |
+| `/auto-goo:goo-init --project` | 创建项目级覆盖配置 `.goo/config.json`，并在 Goo-wiki 可用时创建项目归档根目录。 |
+| `/auto-goo:goo-plan <任务>` | 召回 wiki 上下文并生成 `.goo/plan.json`，不执行。 |
+| `/auto-goo:goo-start <任务>` | 启动完整 AutoGoo 工作流。 |
+| `/auto-goo:goo-status` | 渲染当前 `.goo/plan.json` 进度面板。 |
+| `/auto-goo:goo-continue` | 通过状态、产物和心跳检查恢复中断任务。 |
+| `/auto-goo:goo-benchmark` | 执行指标发现、基线测量、profiling、优化和对比。 |
+| `/auto-goo:goo-improve` | 回顾近期流程摩擦，生成插件改进建议。 |
 
-Natural triggers such as `开始任务`, `run:`, `状态`, `继续`, `评测`, and `自改进` are also documented in the skill prompt, but the slash-command surface is intentionally namespaced.
+自然触发词如 `开始任务`、`run:`、`状态`、`继续`、`评测`、`自改进` 也在 skill prompt 中定义；对外推荐优先使用命名空间 slash command。
 
-## Plan-Only Workflow
+## 只规划不执行
 
-Use `/auto-goo:goo-plan <task>` when you want AutoGoo to recall context and
-prepare an execution plan without changing project files or launching subagents.
-The command writes `.goo/plan.json` as a reviewable DAG that can be resumed later.
-Markdown files and snippets are parsed as structured task input: headings,
-checkboxes, tables, code blocks, paths, commands, constraints, and acceptance
-criteria are converted into planning signals unless the user explicitly asks for
-text summarization or rewriting.
+当你希望 AutoGoo 先召回上下文、生成执行计划，但暂时不改项目文件、不启动 subagent 时，使用：
 
-A generated plan should include:
+```text
+/auto-goo:goo-plan <任务>
+```
 
-- `task`: the original user request or an equivalent concise summary.
-- `wiki_context`: Goo-wiki sources and reusable knowledge found before planning.
-- `steps`: ordered DAG nodes with `id`, `tier`, `depends_on`, `type`, `status`,
-  `progress`, and expected `output`.
-- `max_concurrent`: the intended parallel execution limit.
+该命令会写入可审阅、可恢复的 `.goo/plan.json`。如果旧 plan 已存在，AutoGoo 会先把旧文件归档到 `.goo/plans/history/`，再写入新的当前 plan。
 
-After reviewing the plan, continue with `/auto-goo:goo-start <same task>` or
-resume from the existing `.goo/plan.json` with `/auto-goo:goo-continue`.
+Markdown 文件或片段会被按结构化任务输入解析：标题、checkbox、表格、代码块、路径、命令、约束和验收标准都会转换成规划信号。只有用户明确要求总结、润色或改写 Markdown 时，才按文本处理任务执行。
 
-## Wiki Memory Loop
+如果任务在对话中已经讨论出方案，`goo-plan` 还会把已确认方案、拒绝原因、用户偏好、硬约束和验收标准写入 `context_digest`；大段方案材料会优先落到 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/*.md`，并由 `context_artifacts` 引用。Goo-wiki 不可用时才降级到 `.goo/obsidian/<project-slug>/context/*.md`。后续执行不需要翻聊天记录，只读 plan、相关 Markdown、wiki 摘要和上游产物即可继续。
 
-AutoGoo treats Goo-wiki as project memory, not just a final report destination.
-Each workflow has two wiki touchpoints:
+生成的 plan 应包含：
 
-1. **Recall before planning**: inspect existing project pages, concept notes, weekly reviews, and `log.md` entries related to the task. Extract reusable constraints, previous failed attempts, known commands, data locations, metrics, and naming conventions.
-2. **Archive after execution**: write the final task note, step evidence, metric results, decisions, and follow-up lessons back to Goo-wiki so future AutoGoo runs can reuse them.
+- `task`：用户原始任务或等价摘要。
+- `wiki_context`：规划前召回的 Goo-wiki 来源和可复用知识。
+- `context_digest`：当前对话中已确认的方案、约束、验收标准和未决问题。
+- `context_artifacts`：可选，指向 Goo-wiki 项目路径下的 `context/*.md`、fallback `.goo/obsidian/<project-slug>/context/*.md` 或任务 Markdown。
+- `steps`：有序 DAG 节点，包含 `id`、`tier`、`depends_on`、`type`、`status`、`progress` 和预期 `output`。
+- `subagent`：每个步骤的执行角色，例如 `research`、`implementer`、`optimizer`、`evaluator`、`reviewer`、`recorder`。
+- `max_concurrent`：计划中的并发执行上限。
 
-If `~/workspace/Goo-wiki/CLAUDE.md` is not available, AutoGoo falls back to `.goo/obsidian/` and still keeps local notes in the same shape.
+审阅后可使用 `/auto-goo:goo-start <同一任务>` 执行完整流程，或用 `/auto-goo:goo-continue` 从当前 `.goo/plan.json` 恢复。
 
-Wiki path resolution order:
+## Wiki 记忆循环
+
+AutoGoo 把 Goo-wiki 当作项目记忆层，而不只是最终报告目录。每个工作流都有两个 wiki 触点：
+
+1. **规划前召回**：读取与任务相关的项目页、概念笔记、周报和 `log.md`，提取可复用约束、失败经验、已验证命令、数据位置、指标口径和命名规范。
+2. **执行后归档**：把最终任务笔记、步骤证据、指标结果、关键决策和后续经验写回 Goo-wiki，供未来 AutoGoo 任务复用。
+
+如果 `~/workspace/Goo-wiki/CLAUDE.md` 不存在，AutoGoo 会降级到 `.goo/obsidian/`，并保持本地笔记结构一致。
+
+Wiki 路径解析优先级：
 
 1. `AUTO_GOO_WIKI_DIR`
-2. project config `.goo/config.json` field `wiki_dir`
-3. user config `~/.auto-goo/config.json` field `wiki_dir`
-4. default `~/workspace/Goo-wiki`
-5. fallback archive directory `.goo/obsidian/`
+2. 项目配置 `.goo/config.json` 的 `wiki_dir`
+3. 用户配置 `~/.auto-goo/config.json` 的 `wiki_dir`
+4. 默认路径 `~/workspace/Goo-wiki`
+5. fallback 归档目录 `.goo/obsidian/`
 
-Run `/auto-goo:goo-init --user` for machine-wide defaults and `/auto-goo:goo-init --project` for repo-specific overrides.
+建议先运行 `/auto-goo:goo-init --user` 写入机器级默认值，再在具体 repo 中运行 `/auto-goo:goo-init --project` 写入项目级覆盖。
 
-## Configuration
+## 配置
 
-AutoGoo reads configuration from user and project scopes. Project config overrides user config, and the `AUTO_GOO_WIKI_DIR` environment variable overrides both for the wiki path.
+AutoGoo 同时读取用户级和项目级配置。项目配置覆盖用户配置，环境变量 `AUTO_GOO_WIKI_DIR` 会覆盖两者中的 wiki 路径。
 
-User-level config:
+用户级配置：
 
 ```text
 ~/.auto-goo/config.json
 ```
 
-Project-level config:
+项目级配置：
 
 ```text
 .goo/config.json
 ```
 
-Example:
+示例：
 
 ```json
 {
@@ -169,7 +166,11 @@ Example:
   },
   "archive": {
     "enabled": true,
-    "fallback_dir": ".goo/obsidian"
+    "fallback_dir": ".goo/obsidian",
+    "plan_history_dir": ".goo/plans/history",
+    "project_slug": "<project-slug>",
+    "project_dir": "wiki/projects/<project-slug>",
+    "fallback_project_dir": ".goo/obsidian/<project-slug>"
   },
   "execution": {
     "max_concurrent": 6,
@@ -187,25 +188,29 @@ Example:
 }
 ```
 
-Key fields:
+关键字段：
 
-| Field | Meaning |
+| 字段 | 含义 |
 | --- | --- |
-| `wiki_dir` | Root Goo-wiki vault path. |
-| `wiki.search_paths` | Wiki areas AutoGoo should inspect before planning. |
-| `archive.enabled` | Whether to archive task outputs and lessons. |
-| `archive.fallback_dir` | Local fallback when Goo-wiki is unavailable. |
-| `execution.max_concurrent` | Maximum parallel agent slots. |
-| `execution.heartbeat_seconds` | Agent heartbeat interval. |
-| `execution.stale_after_seconds` | Running step stale threshold for recovery. |
-| `planning.recall_wiki` | Whether planning should reuse wiki knowledge. |
-| `planning.require_wiki_context` | Whether missing wiki context should block planning. |
-| `init.prompt_for_scope` | Whether init should ask user/project scope. |
-| `init.prompt_for_wiki_dir` | Whether init should ask for wiki path. |
+| `wiki_dir` | Goo-wiki vault 根路径。 |
+| `wiki.search_paths` | 规划前需要检索的 wiki 区域。 |
+| `archive.enabled` | 是否归档任务产物和经验。 |
+| `archive.fallback_dir` | Goo-wiki 不可用时的本地 fallback 目录。 |
+| `archive.plan_history_dir` | 历史 `.goo/plan.json` 快照目录。 |
+| `archive.project_slug` | `wiki/projects/` 下的项目文件夹名。 |
+| `archive.project_dir` | Goo-wiki 内的项目归档根路径，项目初始化时自动创建。 |
+| `archive.fallback_project_dir` | Goo-wiki 不可用时的项目级本地归档根路径。 |
+| `execution.max_concurrent` | 最大并行 Agent 槽位数。 |
+| `execution.heartbeat_seconds` | Agent 心跳间隔。 |
+| `execution.stale_after_seconds` | 恢复时判定 running step 过期的阈值。 |
+| `planning.recall_wiki` | 规划时是否复用 wiki 知识。 |
+| `planning.require_wiki_context` | 缺少 wiki 上下文时是否阻塞规划。 |
+| `init.prompt_for_scope` | 初始化时是否询问 user/project 作用域。 |
+| `init.prompt_for_wiki_dir` | 初始化时是否询问 wiki 路径。 |
 
-## Optional Session Hooks
+## 可选 Session Hooks
 
-Add this to a project-level `.claude/settings.json` if you want Claude Code to check Goo-wiki availability and unfinished AutoGoo plans at session start:
+如果希望 Claude Code 在会话启动时检查 Goo-wiki 可用性和未完成 AutoGoo plan，可把下面内容加入项目级 `.claude/settings.json`：
 
 ```json
 {
@@ -226,55 +231,57 @@ Add this to a project-level `.claude/settings.json` if you want Claude Code to c
 }
 ```
 
-## Workflow Model
+## 工作流模型
 
-AutoGoo keeps `.goo/plan.json` as the single source of truth during execution.
+执行期间，AutoGoo 只把当前 `.goo/plan.json` 当作唯一状态源。历史 plan 会保存在 `.goo/plans/history/`，用于审计和回看；`goo-continue` 默认只从当前 plan 恢复，除非用户明确指定要恢复某个历史文件。
 
-| Phase | Output |
+Subagent 默认使用隔离上下文：只拿当前步骤、`context_digest` 中相关决策、相关 wiki 约束、直接上游产物、允许读写路径，以及 plan/log/heartbeat 回写要求。它们不会收到完整主会话历史或无关 subagent 推理；需要共享的大段方案必须先整理成 Goo-wiki 项目路径下的 `context/*.md`，再通过路径传递。
+
+| 阶段 | 输出 |
 | --- | --- |
-| Recall | Relevant Goo-wiki notes, prior decisions, reusable commands, known risks, and project conventions. |
-| Parse | Task goal, DAG steps, dependency edges, optimization markers. `/auto-goo:goo-plan` stops after this phase. |
-| Execute | Step artifacts, structured logs, retry state, heartbeats. |
-| Optimize | Metrics, baseline, profiler notes, improved implementation, comparison. |
-| Archive | `.goo/logs/` records plus Goo-wiki project/concept notes when the vault is available. |
-| Improve | Friction summaries and proposed edits for plugin prompts, references, or settings. |
+| Recall | 相关 Goo-wiki 笔记、历史决策、可复用命令、已知风险和项目约定。 |
+| Parse | 任务目标、DAG 步骤、依赖边、优化标记。`/auto-goo:goo-plan` 在此阶段后停止。 |
+| Execute | 步骤产物、结构化日志、重试状态、心跳。 |
+| Optimize | 指标、基线、profiling 记录、优化实现和对比结果。 |
+| Archive | `.goo/logs/` 记录，以及 Goo-wiki 项目/概念笔记。 |
+| Improve | 流程摩擦摘要，以及针对插件 prompt、参考文档或设置的改进建议。 |
 
-## Repository Layout
+## 仓库结构
 
 ```text
-.claude-plugin/             Plugin metadata
+.claude-plugin/             插件元数据
 commands/                   /auto-goo:goo-* slash commands
-skills/auto-goo/            goo-workflow skill and references
-  SKILL.md                  Workflow entry prompt
-  references/               Detailed execution, parsing, archive, and optimization docs
-  examples/                 Example workflows
-  scripts/                  Validation and helper scripts
-  templates/                Project config templates
-agents/                     Subagent definitions
-.goo/                       Local task plans, logs, and archived runs
+skills/auto-goo/            goo-workflow skill 和参考文档
+  SKILL.md                  工作流入口 prompt
+  references/               执行、解析、归档、优化等详细说明
+  examples/                 工作流示例
+  scripts/                  校验和辅助脚本
+  templates/                项目配置模板
+agents/                     Subagent 定义
+.goo/                       本地任务计划、日志和归档运行记录
 ```
 
-## Requirements
+## 运行要求
 
-- Claude Code with plugin support
-- Tools: `Read`, `Write`, `Edit`, `Bash`, `WebSearch`, `Agent`
-- Recommended: a Goo-wiki Obsidian vault at `~/workspace/Goo-wiki`
+- 支持 plugin 的 Claude Code
+- 工具：`Read`、`Write`、`Edit`、`Bash`、`WebSearch`、`Agent`
+- 推荐：位于 `~/workspace/Goo-wiki` 的 Goo-wiki Obsidian vault
 
-## Release
+## 版本
 
-Current release: **v0.1.0**
+当前版本：**v0.1.0**
 
-This is a preview release focused on the core plugin contract:
+这是一个 preview 版本，重点覆盖核心插件契约：
 
-- namespaced `/auto-goo:goo-*` commands,
-- project initialization via `/auto-goo:goo-init`,
-- plan-only and full-run workflow modes,
-- DAG planning and execution guidance,
-- optimization and benchmark workflow,
-- Goo-wiki recall and archive conventions,
-- plugin self-improvement loop,
-- structural self-check script.
+- 命名空间 `/auto-goo:goo-*` 命令
+- 通过 `/auto-goo:goo-init` 初始化项目
+- plan-only 和 full-run 两种工作流模式
+- DAG 规划和执行规范
+- 优化与 benchmark 工作流
+- Goo-wiki 召回和归档约定
+- 插件自改进循环
+- 结构自检脚本
 
-## License
+## 许可证
 
-AutoGoo is released under the [MIT License](LICENSE).
+AutoGoo 使用 [MIT License](LICENSE) 发布。

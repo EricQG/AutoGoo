@@ -7,11 +7,13 @@
 2. **解析结构化任务** — 如果输入是 Markdown，先提取标题层级、任务清单、代码块、表格、约束、验收标准、文件路径和命令，再判断真实任务
 3. **识别最终交付物** — "用户最终要拿到什么？脚本、模型、报告还是系统？"
 4. **上下文约束合并** — 将 wiki 里的历史决策、已验证命令、路径、指标口径、失败经验写入规划依据
-5. **逆向拆解** — 从目标倒推："要交付这个，需要先有什么？" 持续追问直到拆成原子步骤
-6. **标注依赖关系** — 步骤 A 必须在 B 之前完成 → A `depends_on` B
-7. **识别优化标记** — 包含"性能/速度/延迟/吞吐/效率/内存/GPU/耗时" → `type: "optimize"`
-8. **范围约束** — 每个步骤目标严格取自任务描述，不添加未要求的功能
-9. **输出 plan.json**
+5. **对话方案固化** — 将当前对话中已确认的方案、取舍、用户偏好、约束、验收标准和未决问题写入 `context_digest`；长文本优先写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/` 并在 `context_artifacts` 引用，Goo-wiki 不可用时降级到 `.goo/obsidian/<project-slug>/context/`
+6. **逆向拆解** — 从目标倒推："要交付这个，需要先有什么？" 持续追问直到拆成原子步骤
+7. **标注依赖关系** — 步骤 A 必须在 B 之前完成 → A `depends_on` B
+8. **识别优化标记** — 包含"性能/速度/延迟/吞吐/效率/内存/GPU/耗时" → `type: "optimize"`
+9. **范围约束** — 每个步骤目标严格取自任务描述，不添加未要求的功能
+10. **归档历史 plan** — 如果 `.goo/plan.json` 已存在，先复制到 `.goo/plans/history/plan-<timestamp>.json`
+11. **输出 plan.json**
 
 ## Markdown 任务输入
 
@@ -34,6 +36,26 @@
 正确理解: 读取 README.md，抽取 TODO/约束/命令/验收标准，形成代码或文档执行计划
 ```
 
+## 对话方案输入
+
+当用户在正式执行前已经通过多轮对话讨论出方案时，这些内容也是任务输入的一部分。`goo-plan` 和 `goo-start` 不能假设后续执行 Agent 会记得聊天记录，必须把可执行信息写入 plan 或 Markdown。
+
+必须抽取：
+
+- 已确认方案：最终采用哪条路线，为什么。
+- 已拒绝方案：不采用哪些路线，主要原因是什么。
+- 用户偏好：例如"优先落地实际结果"、"不要依赖上下文"、"只基于 plan/md 执行"。
+- 硬约束：文件路径、命令、安全规则、数据口径、不能改的范围。
+- 验收标准：哪些检查、测试或产物出现后算完成。
+- 后续归档：哪些新经验应在任务结束后写入 Goo-wiki。
+
+写入规则：
+
+- 简短内容直接进入 `.goo/plan.json.context_digest`。
+- 超过 10 行、包含代码块、prompt、表格或多方案比较时，优先写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/<timestamp>-planning-context.md`，并在 `context_artifacts` 引用；Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/context/`。
+- 如果这段方案具有长期复用价值，在最后的 `归档到 Goo-wiki` step 中明确要求把它沉淀为项目页或经验页。
+- step 描述必须可独立执行；如果删掉聊天记录后 step 仍然不清楚，说明 plan 不合格。
+
 ## 解析 Prompt 模板
 
 按以下模板在脑中执行（不需要输出给用户看）：
@@ -51,6 +73,13 @@ Wiki 经验召回：
 - 找到的相关页面：<wikilink/path 列表>
 - 可复用经验：<命令/路径/指标/风险/命名约定>
 - 对本次计划的影响：<新增约束或调整>
+
+对话方案固化：
+- 已确认方案：<当前对话里已经确定的执行路线>
+- 已拒绝方案：<可选，拒绝原因>
+- 用户偏好/硬约束：<必须遵守的口径>
+- 验收标准：<完成后如何判断可交付>
+- 是否需要 context_artifact：<需要则写入 <wiki_dir>/wiki/projects/<project-slug>/context/*.md>
 
 倒推步骤链：
 1. <步骤名> — <做什么>
@@ -82,6 +111,22 @@ DAG 结构总结：
       "<已验证命令/数据路径/指标口径/历史坑点/命名规范>"
     ]
   },
+  "context_digest": {
+    "found": true,
+    "decisions": [
+      "<本轮对话已经确认的方案、取舍和用户偏好>"
+    ],
+    "constraints": [
+      "<必须遵守的约束、路径、范围边界>"
+    ],
+    "acceptance_criteria": [
+      "<验收标准和检查方式>"
+    ],
+    "open_questions": []
+  },
+  "context_artifacts": [
+    "<wiki_dir>/wiki/projects/<project-slug>/context/YYYY-MM-DDTHH-MM-SS-planning-context.md"
+  ],
   "steps": [
     {
       "id": 1,
@@ -90,6 +135,7 @@ DAG 结构总结：
       "description": "<做什么>",
       "depends_on": [],
       "type": "exec",
+      "subagent": "implementer",
       "status": "pending",
       "progress": 0,
       "output": "<产物路径>",
@@ -105,6 +151,7 @@ DAG 结构总结：
       "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
       "depends_on": [1],
       "type": "archive",
+      "subagent": "recorder",
       "status": "pending",
       "progress": 0,
       "output": "Goo-wiki/wiki/projects/<project-slug>/ 或 .goo/obsidian/<project-slug>/",
@@ -133,14 +180,31 @@ DAG 结构总结：
 `/auto-goo:goo-plan <任务>` 只执行 Wiki 经验召回和任务解析，不派发 Subagent。
 
 输出要求：
+- 覆盖 `.goo/plan.json` 前，先把旧 plan 原样复制到 `.goo/plans/history/`
 - 写入 `.goo/plan.json`
 - 填充 `wiki_context`
 - 每个步骤包含 `output`，便于后续恢复和验收
+- 每个步骤包含 `subagent`，明确执行角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`
 - 最后一步包含默认 Wiki 归档任务，依赖所有非归档叶子步骤
 - 展示简洁计划摘要、并行组、关键风险、需要用户确认的点
 - 不修改业务文件，不运行实现命令，不启动优化循环
 
 用户确认后，可用 `/auto-goo:goo-start <任务>` 执行完整流程，或从已有 `.goo/plan.json` 继续。
+
+## 历史 plan 归档
+
+`.goo/plan.json` 是当前任务唯一状态源。每当 `goo-plan`、`goo-start` 或脚本准备写入新的 `.goo/plan.json` 时，如果旧文件已存在，必须先复制归档：
+
+```text
+.goo/plans/history/plan-YYYY-MM-DDTHH-MM-SS.json
+```
+
+归档规则：
+
+- 只复制，不删除旧归档
+- 保留旧 plan 原始内容，便于追溯历史规划
+- 如同一秒内多次生成，追加数字后缀避免覆盖
+- `/auto-goo:goo-continue` 默认只读取当前 `.goo/plan.json`，不自动恢复历史 plan
 
 ### 字段说明
 
@@ -150,12 +214,15 @@ DAG 结构总结：
 | `created_at` | plan 创建时间 |
 | `max_concurrent` | 最大并发槽位数，默认 6 |
 | `wiki_context` | Goo-wiki 经验召回结果。没有找到相关知识时也要写 `{"found": false, "sources": [], "reused_knowledge": []}` |
+| `context_digest` | 当前对话中已确认方案的持久摘要。没有额外对话信息时也要写 `{"found": false, "decisions": [], "constraints": [], "acceptance_criteria": [], "open_questions": []}` |
+| `context_artifacts` | 可选。大段方案、会议纪要、prompt 草案或任务 Markdown 的路径列表，优先位于 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/`；Goo-wiki 不可用时位于 `.goo/obsidian/<project-slug>/context/` |
 | `id` | 全局唯一数字 ID |
 | `tier` | 执行轮次，同一轮内无依赖的步骤可并行 |
 | `name` | 简短动词短语 |
-| `description` | 做什么，含完整上下文。需要外部包时末尾标注 `[dep: <包名>]` |
+| `description` | 做什么，含完整上下文。必须能脱离聊天记录执行，不使用"按上面方案/参考前文"等隐含引用。需要外部包时末尾标注 `[dep: <包名>]` |
 | `depends_on` | 前置步骤 ID 列表，空数组表示无依赖 |
-| `type` | `exec` / `optimize` / `eval` |
+| `type` | `exec` / `optimize` / `eval` / `archive` |
+| `subagent` | 执行该步骤的 Subagent 角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder` |
 | `output` | 预期产物文件路径，用于恢复时检测是否已完成 |
 | `status` | `pending` → `running` → `completed` / `failed`。主会话派发/检测到完成时更新 |
 | `progress` | 0-100 整数，agent 每次心跳时更新。pending 为 0，completed 为 100 |
