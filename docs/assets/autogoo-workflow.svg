@@ -42,8 +42,11 @@
     <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#020617" flood-opacity="0.55"/>
     </filter>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2 2L10 6L2 10V2Z" fill="#67E8F9"/>
+    <marker id="flowArrow" markerWidth="16" markerHeight="16" refX="13" refY="8" orient="auto">
+      <path d="M2 2L14 8L2 14L5.2 8L2 2Z" fill="#A5F3FC"/>
+    </marker>
+    <marker id="loopArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2 2L10 6L2 10V2Z" fill="#34D399"/>
     </marker>
   </defs>
 
@@ -59,12 +62,22 @@
     <text x="920" y="112" fill="#94A3B8" font-size="13">context survives outside chat</text>
   </g>
 
-  <g filter="url(#glow)" opacity="0.85">
-    <path d="M206 255H315" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M426 255H535" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M646 255H755" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M866 255H975" stroke="url(#cyanLine)" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M1046 332C1046 420 154 420 154 332" stroke="url(#loopLine)" stroke-width="3" stroke-dasharray="10 12" marker-end="url(#arrow)"/>
+  <g filter="url(#glow)">
+    <g opacity="0.94">
+      <path d="M242 255H278" stroke="#0E7490" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+      <path d="M462 255H498" stroke="#0E7490" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+      <path d="M682 255H718" stroke="#0E7490" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+      <path d="M902 255H938" stroke="#0E7490" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+      <path d="M242 255H278" stroke="url(#cyanLine)" stroke-width="4" stroke-linecap="round" marker-end="url(#flowArrow)"/>
+      <path d="M462 255H498" stroke="url(#cyanLine)" stroke-width="4" stroke-linecap="round" marker-end="url(#flowArrow)"/>
+      <path d="M682 255H718" stroke="url(#cyanLine)" stroke-width="4" stroke-linecap="round" marker-end="url(#flowArrow)"/>
+      <path d="M902 255H938" stroke="url(#cyanLine)" stroke-width="4" stroke-linecap="round" marker-end="url(#flowArrow)"/>
+      <circle cx="260" cy="255" r="4" fill="#E0F2FE"/>
+      <circle cx="480" cy="255" r="4" fill="#E0F2FE"/>
+      <circle cx="700" cy="255" r="4" fill="#E0F2FE"/>
+      <circle cx="920" cy="255" r="4" fill="#E0F2FE"/>
+    </g>
+    <path d="M1048 338C1030 378 910 392 724 390C666 389 644 389 600 392C402 406 226 386 154 338" stroke="url(#loopLine)" stroke-width="2.4" stroke-dasharray="7 13" stroke-linecap="round" opacity="0.58" marker-end="url(#loopArrow)"/>
   </g>
 
   <g font-family="Inter, Arial, sans-serif" filter="url(#softShadow)">
