@@ -10,6 +10,7 @@ description: AutoGoo Obsidian 归档 Subagent。将执行记录格式化为 Goo-
 ## 输入
 
 执行日志内容（来自 `.goo/logs/`），包含步骤名、耗时、状态、产物路径、关键决策。
+相关 wiki 上下文，包含已有项目页、概念页、问题页、周报、历史任务页、`context_artifacts` 和必要的搜索结果。
 
 ## 输出
 
@@ -20,6 +21,10 @@ description: AutoGoo Obsidian 归档 Subagent。将执行记录格式化为 Goo-
 归档路径优先级：
 1. `~/workspace/Goo-wiki/wiki/projects/<slug>/`（vault 存在时）
 2. `.goo/obsidian/<slug>/`（fallback）
+
+归档不是孤立写文件。写入前先识别可复用的既有页面；写入时使用 `[[...]]` 链接项目入口、相关任务、关键概念、问题、指标、数据/配置说明和上下文材料；写入后更新项目 `index.md` 与 `log.md`，让新页面能被 Obsidian graph/backlinks 发现。
+
+为减少 token 消耗，优先调用 `skills/auto-goo/scripts/wiki-graph-assist.py` 生成紧凑 graph packet；只有 graph packet 不足以判断时才读取完整 Markdown。任务页写好后，可让该脚本用 `--update-index --append-log` 更新项目入口和活动日志。
 
 YAML frontmatter 格式：
 ```yaml

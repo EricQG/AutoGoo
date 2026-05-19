@@ -54,7 +54,7 @@ done
 ARCHIVE_ID=$((COUNT + 1))
 ARCHIVE_TIER=$((COUNT + 1))
 ARCHIVE_DEPS="[$COUNT]"
-ARCHIVE_STEP="    { \"id\": $ARCHIVE_ID, \"tier\": $ARCHIVE_TIER, \"name\": \"归档到 Goo-wiki\", \"description\": \"将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback\", \"depends_on\": $ARCHIVE_DEPS, \"type\": \"archive\", \"subagent\": \"recorder\" }"
+ARCHIVE_STEP="    { \"id\": $ARCHIVE_ID, \"tier\": $ARCHIVE_TIER, \"name\": \"归档到 Goo-wiki\", \"description\": \"将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md 的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback\", \"depends_on\": $ARCHIVE_DEPS, \"type\": \"archive\", \"subagent\": \"recorder\" }"
 STEPS="$STEPS,
 $ARCHIVE_STEP"
 

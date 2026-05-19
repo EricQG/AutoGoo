@@ -386,6 +386,7 @@ block = f"""{begin}
 - 本项目启用 Goo-wiki 作为项目记忆层；规划前先检索 `{wiki_dir}` 中相关项目页、概念页、周报和 `log.md`，复用已有约束、命令、路径、指标口径和历史经验。
 - 使用 `/auto-goo:goo-plan` 生成计划时，必须在 `.goo/plan.json` 最后保留 `归档到 Goo-wiki` 步骤，并依赖所有非归档叶子步骤。
 - 使用 `/auto-goo:goo-start` 或 `/auto-goo:goo-continue` 执行后，必须归档任务目标、计划摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验。
+- 归档时必须维护 Markdown 关联图谱：任务页链接项目入口、相关任务、关键概念、问题、指标、数据/配置说明和上下文材料；同时更新项目 `index.md` 与 `log.md`，避免产生孤立页面。
 - 如果项目是 Git repo，必须在 Goo-wiki 项目页记录 git remote 地址，便于后续迁移、溯源和复用。
 - Goo-wiki 可用时优先写入 `{wiki_dir}/{project_archive_dir}/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_project_dir}` 作为本地 fallback。
 - 不把归档当作事后报告；归档内容要能支撑下一次任务的召回、规划和复用。

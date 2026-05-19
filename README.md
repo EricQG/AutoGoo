@@ -120,7 +120,11 @@ Markdown 文件或片段会被按结构化任务输入解析：标题、checkbox
 AutoGoo 把 Goo-wiki 当作项目记忆层，而不只是最终报告目录。每个工作流都有两个 wiki 触点：
 
 1. **规划前召回**：读取与任务相关的项目页、概念笔记、周报和 `log.md`，提取可复用约束、失败经验、已验证命令、数据位置、指标口径和命名规范。
-2. **执行后归档**：把最终任务笔记、步骤证据、指标结果、关键决策和后续经验写回 Goo-wiki，供未来 AutoGoo 任务复用。
+2. **执行后归档**：把最终任务笔记、步骤证据、指标结果、关键决策和后续经验写回 Goo-wiki，同时维护任务页、项目入口、概念页、问题页、周报和 `log.md` 之间的 `[[Wikilink]]`，供未来 AutoGoo 任务复用。
+
+归档时 AutoGoo 不只是创建一个 Markdown 文件。Recorder 需要先检索相关页面，优先复用已有项目/概念/经验页；写入任务页后同步更新项目 `index.md` 和 `log.md` 链接，避免产生孤立页面。这样 Goo-wiki 会形成可通过 Obsidian graph/backlinks 漫游的项目知识图谱。
+
+为减少 token 消耗，归档阶段优先使用 `skills/auto-goo/scripts/wiki-graph-assist.py` 生成紧凑 graph packet。它会扫描配置的 wiki 路径，返回少量候选页面、`[[Wikilink]]`、标题和片段；任务页写好后也可以用它机械更新项目 `index.md` 与 `log.md`。
 
 如果 `~/workspace/Goo-wiki/CLAUDE.md` 不存在，AutoGoo 会降级到 `.goo/obsidian/`，并保持本地笔记结构一致。
 
@@ -257,7 +261,7 @@ skills/auto-goo/            goo-workflow skill 和参考文档
   SKILL.md                  工作流入口 prompt
   references/               执行、解析、归档、优化等详细说明
   examples/                 工作流示例
-  scripts/                  校验和辅助脚本
+  scripts/                  校验、状态、图谱上下文和辅助脚本
   templates/                项目配置模板
 agents/                     Subagent 定义
 .goo/                       本地任务计划、日志和归档运行记录

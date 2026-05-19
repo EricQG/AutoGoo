@@ -2,7 +2,7 @@
 
 ## 解析流程
 
-0. **Wiki 经验召回** — 检索 Goo-wiki 中相关项目页、概念页、周报和 `log.md`，提取可复用经验
+0. **Wiki 经验召回** — 检索 Goo-wiki 中相关项目页、概念页、问题页、周报、历史任务页和 `log.md`，提取可复用经验与可链接页面
 1. **识别输入形态** — 普通一句话、Markdown 任务包、已有 plan、issue/PR 描述、日志片段等要区别处理
 2. **解析结构化任务** — 如果输入是 Markdown，先提取标题层级、任务清单、代码块、表格、约束、验收标准、文件路径和命令，再判断真实任务
 3. **识别最终交付物** — "用户最终要拿到什么？脚本、模型、报告还是系统？"
@@ -164,7 +164,7 @@ DAG 结构总结：
       "id": 2,
       "tier": 2,
       "name": "归档到 Goo-wiki",
-      "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
+      "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md 的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
       "depends_on": [1],
       "type": "archive",
       "subagent": "recorder",
@@ -189,6 +189,7 @@ DAG 结构总结：
 - 依赖关系：依赖所有非归档叶子步骤，确保实现、验证、报告等最终交付完成后再归档
 - 输出：Goo-wiki 可用时写入 `Goo-wiki/wiki/projects/<project-slug>/`，不可用时写入 `.goo/obsidian/<project-slug>/`
 - 内容：任务目标、plan 摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验
+- 链接：更新任务页、项目入口 `index.md` 和 `log.md` 之间的链接，并把任务页链接到复用的 `wiki_context`、`context_artifacts`、关键概念、问题、指标或历史任务页
 - plan-only 模式只把该步骤写入 `.goo/plan.json`，不实际执行归档
 
 ## Plan-only 模式
