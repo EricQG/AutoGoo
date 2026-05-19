@@ -44,6 +44,42 @@ if [[ -f "$SKILL" ]]; then
   else
     fail "  YAML frontmatter 起始缺失"
   fi
+  if command -v python3 &>/dev/null; then
+    set +e
+    python3 - "$SKILL" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.S)
+if not match:
+    print("missing-frontmatter")
+    raise SystemExit(1)
+fields = {}
+for line in match.group(1).splitlines():
+    if ":" not in line:
+        continue
+    key, value = line.split(":", 1)
+    fields[key.strip()] = value.strip().strip('"').strip("'")
+missing = [key for key in ("name", "description") if not fields.get(key)]
+if missing:
+    print("missing:" + ",".join(missing))
+    raise SystemExit(2)
+if len(fields["description"]) > 1024:
+    raise SystemExit(3)
+PY
+    rc=$?
+    set -e
+    case "$rc" in
+      0) pass "  frontmatter name/description 格式正确" ;;
+      1) fail "  frontmatter 解析失败" ;;
+      2) fail "  frontmatter 缺少 name 或 description" ;;
+      3) fail "  description 超过 1024 字符，会浪费启动上下文" ;;
+      *) fail "  frontmatter 校验异常" ;;
+    esac
+  fi
 else
   fail "SKILL.md 缺失"
 fi
@@ -59,6 +95,7 @@ REFS=(
   "python-standards.md"
   "self-improvement.md"
   "setup.md"
+  "skill-design.md"
   "task-parsing.md"
 )
 
@@ -116,6 +153,26 @@ for s in "${SCRIPTS[@]}"; do
     fi
   else
     fail "scripts/$s 缺失"
+  fi
+done
+
+if command -v python3 &>/dev/null; then
+  for py in "$ROOT"/skills/auto-goo/scripts/*.py; do
+    [[ -f "$py" ]] || continue
+    if PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/autogoo-check-pycache" python3 -m py_compile "$py" 2>/dev/null; then
+      pass "  $(basename "$py") 语法正确"
+    else
+      fail "  $(basename "$py") 语法错误"
+    fi
+  done
+fi
+
+for sh in "$ROOT"/skills/auto-goo/scripts/*.sh; do
+  [[ -f "$sh" ]] || continue
+  if bash -n "$sh" 2>/dev/null; then
+    pass "  $(basename "$sh") 语法正确"
+  else
+    fail "  $(basename "$sh") 语法错误"
   fi
 done
 
