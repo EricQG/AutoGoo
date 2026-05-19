@@ -21,68 +21,79 @@ test -n "$SCRIPT" && python3 "$SCRIPT" --plan .goo/plan.json
 
 ## 信息密度原则
 
-- 已完成步骤：一行一个，只放关键信息
-- 执行中步骤：进度条 + 一句话状态
+- 顶部先给总览：完成数、进度、running/ready/blocked/failed、槽位占用
+- 第二行明确 `Next:`，直接告诉用户下一步该等、该跑还是该处理告警
+- Ready 和 Blocked 分开展示，不把所有 pending 混在一起
+- 执行中步骤：进度条 + output 预览 + heartbeat
 - 告警：只在有问题时才出现
 - 不展示无信息量的空面板
 
 ## 布局
 
 ```
-══════════════════════════════════════════════════════════════
-  {task}    {completed}/{total}  ████████░░  86%
-══════════════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║ AutoGoo Status  {task}                                           {done}/{total}  86% ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+  ██████████████████████████░░░░  completed 12 · running 2 · ready 1 · blocked 1 · failed 0 · slots 2/6
+────────────────────────────────────────────────────────────────────────────────────────
+Next: 等待执行中步骤完成；完成后下游步骤会解锁。
 
-▶ 执行中 (2)
-  gen_p6.py         ██████████░░░░  38%   ~150行  剩余 3min
-  gen_p5.py         ████░░░░░░░░░░  22%   ~100行  剩余 5min
+RUNNING (2)
+▶  #6  gen_p6.py                       ██████░░░░░░░░░░  38% · output 150行 · hb 22s前
+▶  #7  gen_p5.py                       ████░░░░░░░░░░░░  22% · output ... · hb 1min前
 
-⏳ 待执行 (2)
-  update_viewer.py  就绪
-  小批量验证         等待 gen_p6 gen_p5
+READY (1)
+▷  #8  update_viewer.py                implementer · output docs/viewer.md
 
-✅ 已完成 (10)
-  schemas.py  722行  bbox_utils.py  304行  constraints.py  260行
-  annotation.py  492行  gen_p1.py  885行  gen_p2.py  755行
-  gen_p3.py  722行  gen_p4.py  1415行  gen_p6.py  1471行
-  gen_p5.py  1273行  validate_qa.py  436行  ...
+BLOCKED (1)
+⏳  #9  小批量验证                      等待 gen_p6.py gen_p5.py
 
-⚠️ gen_p5 progress 停滞 3 轮，可能卡住
+DONE (10)
+  #1 schemas.py · #2 bbox_utils.py · #3 constraints.py · #4 annotation.py · #5 gen_p1.py
 ```
 
 ## 面板规则
 
 ### 顶部横幅
 
-一行：`══════  {task}  {n}/{total}  {进度条}  {百分比}  ══════`
+三行边框标题 + 一行总体状态。总体状态必须包含：
 
-进度条 20 字符宽，已填充用 `█`，剩余用 `░`。
+- 总进度条
+- completed / running / ready / blocked / failed 数量
+- slots `{running}/{max_concurrent}`
 
-右侧附加信息（可选）：
-- 有 running agent → `· 槽位 {running}/{max_concurrent}`
-- 全部完成 → `· 10,018 行`
+紧跟一行 `Next:`，用一句话说明下一步行动：
+- 有告警 → 先处理告警
+- 有 running → 等待运行中步骤完成
+- 有 ready → 展示最多 3 个可立即执行步骤
+- 只有 blocked → 等待依赖完成
+- 全部完成 → 所有步骤已完成
 
 ### 执行中面板
 
 只展示 status=running 的步骤，无则跳过此面板。
 
-每行：`{name}  {进度条 16 字符}  {progress}%  {产物预览}  剩余 {预估}`
+每行：`▶ {id} {name} {进度条} {progress}% · output {产物预览} · hb {heartbeat age}`
 
-进度条宽 16 字符（`█` 填充 + `>` 当前位置 + `░` 剩余），百分比右对齐 3 字符。
+进度条宽 16 字符，百分比右对齐 3 字符。
 
 产物预览：output 文件存在就显示行数，不存在显示 `...`
 
-### 待执行面板
+### Ready 面板
 
-只展示 status=pending 的步骤，无则跳过。
+只展示 status=pending 且依赖全部完成的步骤，无则跳过。
 
-每行：`{name}  {状态词}`
-- 依赖全满足 → `就绪`
-- 有未完成依赖 → `等待 {缺失依赖名，最多两个}` 超过两个加 `+{n}`
+每行：`▷ {id} {name} {subagent/type} · output {output}`
+
+### Blocked 面板
+
+只展示 status=pending 但依赖未完成的步骤，无则跳过。
+
+每行：`⏳ {id} {name} 等待 {缺失依赖名，最多两个}`，超过两个加 `+{n}`。
 
 ### 已完成面板
 
-status=completed 的步骤，紧凑横排，多个用 `·` 分隔。每步：`{name} {产物行数}行`。超过 8 个时只展示最近完成的，其余省略为 `... 等 {n} 步`。
+status=completed 的步骤，紧凑横排，展示最近 6 个，多个用 `·` 分隔。超过 6 个时追加 `... earlier {n} completed`。
 
 ### 告警面板
 

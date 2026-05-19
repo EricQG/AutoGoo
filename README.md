@@ -170,7 +170,8 @@ AutoGoo 同时读取用户级和项目级配置。项目配置覆盖用户配置
     "plan_history_dir": ".goo/plans/history",
     "project_slug": "<project-slug>",
     "project_dir": "wiki/projects/<project-slug>",
-    "fallback_project_dir": ".goo/obsidian/<project-slug>"
+    "fallback_project_dir": ".goo/obsidian/<project-slug>",
+    "git_remote_url": "https://github.com/<owner>/<repo>.git"
   },
   "execution": {
     "max_concurrent": 6,
@@ -200,6 +201,7 @@ AutoGoo 同时读取用户级和项目级配置。项目配置覆盖用户配置
 | `archive.project_slug` | `wiki/projects/` 下的项目文件夹名。 |
 | `archive.project_dir` | Goo-wiki 内的项目归档根路径，项目初始化时自动创建。 |
 | `archive.fallback_project_dir` | Goo-wiki 不可用时的项目级本地归档根路径。 |
+| `archive.git_remote_url` | 项目是 Git repo 时自动记录的 remote 地址；会同步写入 Goo-wiki 项目页。 |
 | `execution.max_concurrent` | 最大并行 Agent 槽位数。 |
 | `execution.heartbeat_seconds` | Agent 心跳间隔。 |
 | `execution.stale_after_seconds` | 恢复时判定 running step 过期的阈值。 |

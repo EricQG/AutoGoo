@@ -61,7 +61,10 @@ $ARCHIVE_STEP"
 cat > "$PLAN_FILE" << EOF
 {
   "task": "$TASK",
+  "status": "pending",
   "created_at": "$TIMESTAMP",
+  "started_at": null,
+  "completed_at": null,
   "wiki_context": {
     "found": false,
     "sources": [],

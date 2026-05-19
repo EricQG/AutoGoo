@@ -32,6 +32,7 @@ AutoGoo 的 wiki 流程分成两段：
 - 文件名使用小写连字符（`lowercase-with-hyphens.md`）
 - 默认使用中文
 - 每次任务完成后向 `Goo-wiki/log.md` 追加活动日志
+- 如果项目是 Git repo，必须在项目页或任务总览笔记中记录 git remote 地址；优先读取 `.goo/config.json.archive.git_remote_url`，缺失时用 `git remote get-url origin` 或第一个 remote 兜底
 - 不写入 `raw/` 目录（原始来源不可变）
 - 成熟度 status: `seed` → `developing` → `stable`
 - 使用 `[[Wikilink]]` 建立双向链接
@@ -76,10 +77,11 @@ AutoGoo 的 wiki 流程分成两段：
 10. 数字和指标用表格呈现
 11. 记录本次任务复用了哪些 wiki 经验，以及新增了哪些可复用经验
 12. 记录 `context_digest` 中的关键方案、取舍、用户约束和验收标准；如果有 `context_artifacts`，用路径或 wikilink 引用
-13. 任务完成后向 Goo-wiki/log.md 追加一条活动日志
-14. 不要写入 raw/ 目录
-15. 输出目录优先级：Goo-wiki/wiki/ > .goo/obsidian/（fallback）
-16. 子步骤内容内联在主任务笔记中，用 --- 分隔，不拆为独立文件
+13. 如果项目是 Git repo，在项目页或任务总览笔记的 `Project Metadata` / `项目元信息` 小节写入 git remote 地址；优先使用 `.goo/config.json.archive.git_remote_url`
+14. 任务完成后向 Goo-wiki/log.md 追加一条活动日志
+15. 不要写入 raw/ 目录
+16. 输出目录优先级：Goo-wiki/wiki/ > .goo/obsidian/（fallback）
+17. 子步骤内容内联在主任务笔记中，用 --- 分隔，不拆为独立文件
 ```
 
 ## log.md 追加格式
@@ -89,6 +91,7 @@ AutoGoo 的 wiki 流程分成两段：
 
 执行 {{step_count}} 步，耗时 {{total_duration}}。含优化迭代 {{round_count}} 轮。
 项目页：[[wiki/projects/<project-slug>/<task-name>|<task_name>]]
+Git: {{git_remote_url_or_empty}}
 复用经验：{{reused_knowledge_count}} 条；新增经验：{{new_lessons_count}} 条。
 ```
 

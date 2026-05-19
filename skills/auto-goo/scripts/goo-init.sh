@@ -150,6 +150,23 @@ default_project_slug() {
   printf '%s\n' "$raw"
 }
 
+git_remote_url() {
+  local root="$1"
+  local remote
+  if ! git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 1
+  fi
+  if git -C "$root" remote get-url origin 2>/dev/null; then
+    return 0
+  fi
+  remote="$(git -C "$root" remote 2>/dev/null | sed -n '1p')"
+  if [[ -n "$remote" ]]; then
+    git -C "$root" remote get-url "$remote" 2>/dev/null
+    return $?
+  fi
+  return 1
+}
+
 if [[ -z "$SCOPE" ]]; then
   if [[ ! -t 0 ]]; then
     echo "error: cannot choose init scope in non-interactive mode" >&2
@@ -194,6 +211,7 @@ WIKI_DIR_EXPANDED="$(expand_path "$WIKI_DIR")"
 WIKI_READY=0
 PROJECT_ARCHIVE_DIR=""
 FALLBACK_PROJECT_ARCHIVE_DIR=""
+GIT_REMOTE_URL=""
 
 if [[ "$SCOPE" == "project" ]]; then
   DEFAULT_PROJECT_SLUG="$(default_project_slug "$ROOT")"
@@ -203,6 +221,7 @@ if [[ "$SCOPE" == "project" ]]; then
   PROJECT_SLUG="$(default_project_slug "$PROJECT_SLUG")"
   PROJECT_ARCHIVE_DIR="wiki/projects/$PROJECT_SLUG"
   FALLBACK_PROJECT_ARCHIVE_DIR="$FALLBACK_DIR/$PROJECT_SLUG"
+  GIT_REMOTE_URL="$(git_remote_url "$ROOT" || true)"
 fi
 
 echo ""
@@ -212,6 +231,9 @@ echo "  config:     $CONFIG_FILE"
 echo "  wiki_dir:   $WIKI_DIR"
 if [[ "$SCOPE" == "project" ]]; then
   echo "  project:    $PROJECT_SLUG"
+  if [[ -n "$GIT_REMOTE_URL" ]]; then
+    echo "  git remote: $GIT_REMOTE_URL"
+  fi
 fi
 
 if [[ -f "$WIKI_DIR_EXPANDED/CLAUDE.md" ]]; then
@@ -235,11 +257,48 @@ fi
 if [[ "$SCOPE" == "project" && "$WIKI_READY" -eq 1 ]]; then
   mkdir -p "$WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR"
   echo "  archive root: $WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR"
+  if [[ -n "$GIT_REMOTE_URL" ]]; then
+    python3 - "$WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR/index.md" "$PROJECT_SLUG" "$ROOT" "$GIT_REMOTE_URL" <<'PY'
+import sys
+from pathlib import Path
+
+target = Path(sys.argv[1])
+project_slug = sys.argv[2]
+project_root = sys.argv[3]
+git_remote_url = sys.argv[4]
+
+begin = "<!-- AUTO-GOO-PROJECT-META-BEGIN -->"
+end = "<!-- AUTO-GOO-PROJECT-META-END -->"
+block = f"""{begin}
+## Project Metadata
+
+- Project slug: `{project_slug}`
+- Local path: `{project_root}`
+- Git repository: `{git_remote_url}`
+{end}
+"""
+
+if target.exists():
+    text = target.read_text(encoding="utf-8")
+else:
+    text = f"# {project_slug}\n"
+
+if begin in text and end in text:
+    prefix, rest = text.split(begin, 1)
+    _, suffix = rest.split(end, 1)
+    new_text = prefix.rstrip() + "\n\n" + block + suffix.lstrip("\n")
+else:
+    new_text = text.rstrip() + "\n\n" + block
+
+target.write_text(new_text, encoding="utf-8")
+PY
+    echo "  project page: updated git repository in $WIKI_DIR_EXPANDED/$PROJECT_ARCHIVE_DIR/index.md"
+  fi
 fi
 
 mkdir -p "$CONFIG_DIR"
 
-python3 - "$CONFIG_FILE" "$WIKI_DIR" "$FALLBACK_DIR" "$PROJECT_SLUG" "$PROJECT_ARCHIVE_DIR" "$FALLBACK_PROJECT_ARCHIVE_DIR" <<'PY'
+python3 - "$CONFIG_FILE" "$WIKI_DIR" "$FALLBACK_DIR" "$PROJECT_SLUG" "$PROJECT_ARCHIVE_DIR" "$FALLBACK_PROJECT_ARCHIVE_DIR" "$GIT_REMOTE_URL" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -250,6 +309,7 @@ fallback_dir = sys.argv[3]
 project_slug = sys.argv[4]
 project_archive_dir = sys.argv[5]
 fallback_project_archive_dir = sys.argv[6]
+git_remote_url = sys.argv[7]
 
 config = {
     "version": 1,
@@ -286,6 +346,8 @@ if project_slug:
     config["archive"]["project_slug"] = project_slug
     config["archive"]["project_dir"] = project_archive_dir
     config["archive"]["fallback_project_dir"] = fallback_project_archive_dir
+    if git_remote_url:
+        config["archive"]["git_remote_url"] = git_remote_url
 
 target.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
@@ -324,6 +386,7 @@ block = f"""{begin}
 - 本项目启用 Goo-wiki 作为项目记忆层；规划前先检索 `{wiki_dir}` 中相关项目页、概念页、周报和 `log.md`，复用已有约束、命令、路径、指标口径和历史经验。
 - 使用 `/auto-goo:goo-plan` 生成计划时，必须在 `.goo/plan.json` 最后保留 `归档到 Goo-wiki` 步骤，并依赖所有非归档叶子步骤。
 - 使用 `/auto-goo:goo-start` 或 `/auto-goo:goo-continue` 执行后，必须归档任务目标、计划摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验。
+- 如果项目是 Git repo，必须在 Goo-wiki 项目页记录 git remote 地址，便于后续迁移、溯源和复用。
 - Goo-wiki 可用时优先写入 `{wiki_dir}/{project_archive_dir}/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_project_dir}` 作为本地 fallback。
 - 不把归档当作事后报告；归档内容要能支撑下一次任务的召回、规划和复用。
 {end}

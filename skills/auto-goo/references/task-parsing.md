@@ -53,6 +53,7 @@
 
 - 简短内容直接进入 `.goo/plan.json.context_digest`。
 - 超过 10 行、包含代码块、prompt、表格或多方案比较时，优先写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/<timestamp>-planning-context.md`，并在 `context_artifacts` 引用；Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/context/`。
+- 如果 `.goo/plan.json` 已经生成，之后对话又产生新方案、约束、验收标准或用户偏好，`goo-start` / `goo-continue` 默认在执行前做 context sync：先归档旧 plan，短内容追加到 `context_digest.post_plan_updates`，长内容写入 `context_artifacts` 指向的 Markdown。只有新增内容与原 plan 冲突、扩大范围、改变验收标准或涉及危险操作时才询问用户确认。
 - 如果这段方案具有长期复用价值，在最后的 `归档到 Goo-wiki` step 中明确要求把它沉淀为项目页或经验页。
 - step 描述必须可独立执行；如果删掉聊天记录后 step 仍然不清楚，说明 plan 不合格。
 
@@ -99,7 +100,10 @@ DAG 结构总结：
 ```json
 {
   "task": "<任务描述>",
+  "status": "pending",
   "created_at": "YYYY-MM-DDTHH-MM-SS",
+  "started_at": null,
+  "completed_at": null,
   "max_concurrent": 6,
   "wiki_context": {
     "found": true,
@@ -122,7 +126,19 @@ DAG 结构总结：
     "acceptance_criteria": [
       "<验收标准和检查方式>"
     ],
-    "open_questions": []
+    "open_questions": [],
+    "post_plan_updates": [
+      {
+        "at": "YYYY-MM-DDTHH-MM-SS",
+        "source": "chat_after_plan",
+        "summary": "<plan 生成后新增对话上下文摘要>",
+        "decisions": [],
+        "constraints": [],
+        "acceptance_criteria": [],
+        "open_questions": [],
+        "artifact": "<可选：长内容写入的 Markdown 路径>"
+      }
+    ]
   },
   "context_artifacts": [
     "<wiki_dir>/wiki/projects/<project-slug>/context/YYYY-MM-DDTHH-MM-SS-planning-context.md"
@@ -184,7 +200,7 @@ DAG 结构总结：
 - 写入 `.goo/plan.json`
 - 填充 `wiki_context`
 - 每个步骤包含 `output`，便于后续恢复和验收
-- 每个步骤包含 `subagent`，明确执行角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`
+- 每个步骤必须包含合法 `subagent`，明确执行角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`。缺失或不合法时执行阶段先补 plan 或创建新角色，不由主 Agent 代执行
 - 最后一步包含默认 Wiki 归档任务，依赖所有非归档叶子步骤
 - 展示简洁计划摘要、并行组、关键风险、需要用户确认的点
 - 不修改业务文件，不运行实现命令，不启动优化循环
@@ -208,13 +224,19 @@ DAG 结构总结：
 
 ### 字段说明
 
+**Plan 级别字段：**
+
 | 字段 | 说明 |
 |------|------|
 | `task` | 用户任务原文或等价摘要 |
+| `status` | Plan 整体状态：`pending`（未开始）→ `running`（执行中）→ `completed`（全部完成）/ `failed`（关键失败）/ `paused`（用户暂停） |
 | `created_at` | plan 创建时间 |
+| `started_at` | plan 开始执行时间，首个步骤派发时设置 |
+| `completed_at` | plan 完成时间，所有步骤完成或标记失败时设置 |
 | `max_concurrent` | 最大并发槽位数，默认 6 |
 | `wiki_context` | Goo-wiki 经验召回结果。没有找到相关知识时也要写 `{"found": false, "sources": [], "reused_knowledge": []}` |
-| `context_digest` | 当前对话中已确认方案的持久摘要。没有额外对话信息时也要写 `{"found": false, "decisions": [], "constraints": [], "acceptance_criteria": [], "open_questions": []}` |
+| `context_digest` | 当前对话中已确认方案的持久摘要。没有额外对话信息时也要写 `{"found": false, "decisions": [], "constraints": [], "acceptance_criteria": [], "open_questions": [], "post_plan_updates": []}` |
+| `context_digest.post_plan_updates` | plan 生成后、执行前通过对话产生的增量方案/约束/验收标准。`goo-start` / `goo-continue` 默认同步到这里；长内容用 `artifact` 指向 `context_artifacts` 中的 Markdown |
 | `context_artifacts` | 可选。大段方案、会议纪要、prompt 草案或任务 Markdown 的路径列表，优先位于 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/`；Goo-wiki 不可用时位于 `.goo/obsidian/<project-slug>/context/` |
 | `id` | 全局唯一数字 ID |
 | `tier` | 执行轮次，同一轮内无依赖的步骤可并行 |
@@ -222,7 +244,7 @@ DAG 结构总结：
 | `description` | 做什么，含完整上下文。必须能脱离聊天记录执行，不使用"按上面方案/参考前文"等隐含引用。需要外部包时末尾标注 `[dep: <包名>]` |
 | `depends_on` | 前置步骤 ID 列表，空数组表示无依赖 |
 | `type` | `exec` / `optimize` / `eval` / `archive` |
-| `subagent` | 执行该步骤的 Subagent 角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder` |
+| `subagent` | 执行该步骤的 Subagent 角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`。缺失或不合法时先补 plan 或创建新角色，不由主 Agent 降级代执行 |
 | `output` | 预期产物文件路径，用于恢复时检测是否已完成 |
 | `status` | `pending` → `running` → `completed` / `failed`。主会话派发/检测到完成时更新 |
 | `progress` | 0-100 整数，agent 每次心跳时更新。pending 为 0，completed 为 100 |

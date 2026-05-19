@@ -15,7 +15,8 @@
     "plan_history_dir": ".goo/plans/history",
     "project_slug": "<project-slug>",
     "project_dir": "wiki/projects/<project-slug>",
-    "fallback_project_dir": ".goo/obsidian/<project-slug>"
+    "fallback_project_dir": ".goo/obsidian/<project-slug>",
+    "git_remote_url": "https://github.com/<owner>/<repo>.git"
   },
   "execution": {
     "max_concurrent": 6,
