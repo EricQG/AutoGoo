@@ -1,0 +1,95 @@
+---
+name: auto-goo:goo-daily-report
+description: 生成 Goo-wiki 日报/周报 — 扫描 Claude Code 和 Codex 会话，写入 journal/daily/
+---
+
+# /auto-goo:goo-daily-report — 日报/周报
+
+扫描本机 Claude Code 与 Codex 会话记录，归纳指定日期或日期范围内的工作内容，写入 Goo-wiki `journal/daily/`，并更新 `log.md`。
+
+## 触发
+
+推荐显式调用：
+
+```text
+/auto-goo:goo-daily-report
+/auto-goo:goo-daily-report 2026-05-20
+/auto-goo:goo-daily-report 本周
+```
+
+也适用于用户说"日报"、"写日报"、"生成日报"、"总结今天"、"今天干了什么"、"周报"、"周总结"、"weekly report" 或 "daily report"。
+
+## 行为
+
+1. 确定日期范围：无参数默认今天；"昨天"、"今天"、"本周"必须转成具体日期。
+2. 按配置优先级解析 Goo-wiki 路径：`AUTO_GOO_WIKI_DIR` → `.goo/config.json` → `~/.auto-goo/config.json` → `~/workspace/Goo-wiki`。
+3. 运行插件脚本提取会话摘要：
+
+```bash
+auto_goo_root="${AUTO_GOO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$HOME/workspace/AutoGoo}}"
+python3 "$auto_goo_root/skills/auto-goo/scripts/daily-report-sessions.py" --date YYYY-MM-DD
+```
+
+4. 必要时读取关键会话 JSONL 尾部 20-50 行，只补最终状态、产物路径、提交信息和验证结果；不要逐条抄录对话。
+5. 按项目/工作流归类，合并同一目标下的连续会话。
+6. 写入或续写 `journal/daily/YYYY-MM-DD.md`。如果同日日报已存在，先读取并识别已覆盖内容，只追加新增会话，不整体覆盖。
+7. 更新 `log.md`，添加到同日段落；没有同日段落时追加 `## YYYY-MM-DD`。
+
+## 日报模板
+
+```markdown
+---
+title: "日报 - YYYY-MM-DD"
+date: YYYY-MM-DD
+type: daily-note
+tags:
+  - daily/YYYY-MM
+  - project/<project-tag>
+---
+
+# 日报 - YYYY-MM-DD
+
+## 今日工作概览
+
+| 时段 | 内容 | 渠道 |
+|------|------|------|
+| HH:MM-HH:MM | 简述 | Claude/Codex |
+
+---
+
+## 工作详情
+
+### N. <工作流标题>（`<session_id>`）
+
+- <关键活动>
+- <产出物>
+- <命令/文件>
+
+---
+
+## Git 提交
+
+| 仓库 | 提交 | 说明 |
+|------|------|------|
+| `owner/repo` | `hash` | message |
+
+---
+
+## 打开问题
+
+- [ ] <待办>
+
+---
+
+## 明日计划
+
+- [ ] <计划>
+```
+
+## 写作规则
+
+- 对每个会话分组，不罗列每条用户消息。
+- 保留可复现信息：仓库、路径、命令、提交、产物、验证结果。
+- 对敏感信息只写"已配置/已验证"，不输出密钥、令牌、凭据。
+- 文件链接使用相对 Goo-wiki 根目录的 wikilink，如 `[[journal/daily/YYYY-MM-DD]]`。
+- 周报请求先生成或更新各日素材，再给出一周汇总；不要把一周内容硬塞进单日日报。

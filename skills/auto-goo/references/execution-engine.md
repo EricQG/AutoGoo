@@ -164,16 +164,16 @@ for step in batch:
 **Plan 级别状态**：`goo-status.py --update-status` 会自动根据步骤状态计算并更新 plan 顶层的 `status`、`started_at`、`completed_at` 字段。主 Agent 应在关键节点调用：
 
 ```bash
-python3 <plugin>/skills/auto-goo/scripts/goo-status.py --plan .goo/plan.json --update-status
+python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/goo-status.py" --plan .goo/plan.json --update-status
 ```
 
 状态回写必须使用插件脚本，避免多个 Agent 用临时 JSON 代码互相覆盖：
 
 ```bash
-python3 <plugin>/skills/auto-goo/scripts/update-step.py --plan .goo/plan.json --step-id <id> --start --progress 5 --agent-id <agent>
-python3 <plugin>/skills/auto-goo/scripts/update-step.py --plan .goo/plan.json --step-id <id> --heartbeat --progress <0-100>
-python3 <plugin>/skills/auto-goo/scripts/update-step.py --plan .goo/plan.json --step-id <id> --complete
-python3 <plugin>/skills/auto-goo/scripts/update-step.py --plan .goo/plan.json --step-id <id> --fail --error "<reason>"
+python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-step.py" --plan .goo/plan.json --step-id <id> --start --progress 5 --agent-id <agent>
+python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-step.py" --plan .goo/plan.json --step-id <id> --heartbeat --progress <0-100>
+python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-step.py" --plan .goo/plan.json --step-id <id> --complete
+python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-step.py" --plan .goo/plan.json --step-id <id> --fail --error "<reason>"
 ```
 
 ### MAX_CONCURRENT 配置
@@ -303,7 +303,7 @@ python3 <plugin>/skills/auto-goo/scripts/update-step.py --plan .goo/plan.json --
 - Agent 启动后立即写第一次 heartbeat_at + progress=5
 - 之后每 30 秒更新：`heartbeat_at` + **`progress` (0-100)**
 - 进度估算：agent 在任务开头拆 3-5 个里程碑，每过一个里程碑更新进度
-- 心跳通过 `skills/auto-goo/scripts/update-step.py` 更新 plan.json，不要手写临时 JSON 修改代码
+- 心跳通过 `python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-step.py"` 更新 plan.json，不要手写临时 JSON 修改代码
 
 ### 进度判断
 

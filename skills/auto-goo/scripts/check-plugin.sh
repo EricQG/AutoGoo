@@ -112,7 +112,7 @@ done
 echo ""
 echo "── 4. 命令文件 ──"
 
-CMDS=("goo-init" "goo-plan" "goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status")
+CMDS=("goo-init" "goo-plan" "goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status" "goo-daily-report" "goo-usage")
 for cmd in "${CMDS[@]}"; do
   f="$ROOT/commands/$cmd.md"
   if [[ -f "$f" ]]; then
@@ -141,7 +141,7 @@ fi
 echo ""
 echo "── 6. 脚本文件 ──"
 
-SCRIPTS=("goo-init.sh" "init-plan.sh" "goo-status.py" "update-step.py" "wiki-graph-assist.py" "check-plugin.sh")
+SCRIPTS=("goo-init.sh" "init-plan.sh" "goo-status.py" "update-step.py" "wiki-graph-assist.py" "daily-report-sessions.py" "goo-usage.py" "goo-ssh.sh" "check-plugin.sh")
 for s in "${SCRIPTS[@]}"; do
   f="$ROOT/skills/auto-goo/scripts/$s"
   if [[ -f "$f" ]]; then

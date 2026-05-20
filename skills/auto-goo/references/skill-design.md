@@ -34,7 +34,7 @@ AutoGoo's entrypoint should always make these parts easy to find:
 
 Before considering AutoGoo changes ready:
 
-- `bash skills/auto-goo/scripts/check-plugin.sh` passes.
+- `bash "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/check-plugin.sh"` passes.
 - New or changed scripts have valid syntax checks.
 - Docs, command files, templates, and generated init blocks agree on any changed behavior.
 - Any token-saving rule has a concrete script, config field, or checklist behind it.

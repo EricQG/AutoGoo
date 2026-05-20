@@ -30,5 +30,23 @@
   "init": {
     "prompt_for_scope": true,
     "prompt_for_wiki_dir": true
-  }
+  },
+  "servers": [
+    {
+      "ip": "192.168.1.100",
+      "port": 22,
+      "user": "ubuntu",
+      "type": "cpu",
+      "purpose": "data preprocessing and model evaluation",
+      "secrets_file": ".goo/secrets.json"
+    },
+    {
+      "ip": "192.168.1.101",
+      "port": 2222,
+      "user": "ubuntu",
+      "type": "gpu",
+      "purpose": "model training and inference",
+      "secrets_file": ".goo/secrets.json"
+    }
+  ]
 }
