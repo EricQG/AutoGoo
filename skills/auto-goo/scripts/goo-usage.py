@@ -290,6 +290,8 @@ def parse_args() -> argparse.Namespace:
                    help="Initial tab (default: overview)")
     p.add_argument("--no-builtin-pricing", action="store_true",
                    help="Disable built-in model pricing")
+    p.add_argument("--serve", action="store_true", help="Start HTTP server with HTML dashboard")
+    p.add_argument("--port", type=int, default=9876, help="HTTP server port (default: 9876)")
     return p.parse_args()
 
 
@@ -1021,13 +1023,136 @@ def render(args: argparse.Namespace, tab: str | None = None, pricing=None, tz=No
     return renderers[active_tab](args, pricing, tz)
 
 
+# ── JSON Serialization ─────────────────────────────────────────────────────────
+
+def _json_safe(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def api_data(args, pricing, tz):
+    rows, since, until = collect(args, tz)
+    data = summarize(rows, pricing)
+    data["since"] = since
+    data["until"] = until
+    data["updated"] = datetime.now(tz).isoformat()
+    data["interval"] = args.interval
+    return data
+
+
+def api_history(args, pricing, tz, period="7d"):
+    now = datetime.now(tz)
+    if period == "all":
+        since_dt = datetime(2024, 1, 1, tzinfo=tz)
+    elif period == "30d":
+        since_dt = now - timedelta(days=30)
+    else:
+        since_dt = now - timedelta(days=7)
+    since_iso = iso_bound(since_dt)
+    until_iso = iso_bound(now)
+    all_rows = load_records(args.input_dir, since_iso, until_iso, args.include_synthetic)
+    return aggregate_period(all_rows, "daily", pricing, tz)
+
+
+# ── HTTP Server ───────────────────────────────────────────────────────────────
+
+_HTML_PATH = Path(__file__).resolve().parent / "goo-usage-dashboard.html"
+
+
+def _read_html():
+    if _HTML_PATH.exists():
+        return _HTML_PATH.read_text(encoding="utf-8")
+    return "<html><body><h1>Dashboard template not found</h1></body></html>"
+
+
+class _UsageHandler:
+
+    def __init__(self, args, pricing, tz):
+        self.args = args
+        self.pricing = pricing
+        self.tz = tz
+
+    def handle(self, path):
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(path)
+        route = parsed.path.rstrip("/") or "/"
+
+        if route == "/":
+            return 200, "text/html; charset=utf-8", _read_html()
+
+        if route == "/api/data":
+            try:
+                data = api_data(self.args, self.pricing, self.tz)
+                body = json.dumps(data, default=_json_safe)
+                return 200, "application/json", body
+            except Exception as exc:
+                return 500, "application/json", json.dumps({"error": str(exc)})
+
+        if route == "/api/history":
+            qs = parse_qs(parsed.query)
+            period = qs.get("period", ["7d"])[0]
+            try:
+                data = api_history(self.args, self.pricing, self.tz, period)
+                body = json.dumps(data, default=_json_safe)
+                return 200, "application/json", body
+            except Exception as exc:
+                return 500, "application/json", json.dumps({"error": str(exc)})
+
+        return 404, "text/plain", "Not Found"
+
+
+def _make_server(args, pricing, tz):
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    handler_obj = _UsageHandler(args, pricing, tz)
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            code, mime, body = handler_obj.handle(self.path)
+            self.send_response(code)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(body.encode("utf-8"))))
+            self.end_headers()
+            self.wfile.write(body.encode("utf-8"))
+
+        def log_message(self, format, *args):
+            pass
+
+    return HTTPServer(("127.0.0.1", args.port), _Handler)
+
+
+def run_serve(args, pricing, tz):
+    import webbrowser
+    server = _make_server(args, pricing, tz)
+    url = f"http://127.0.0.1:{args.port}"
+    print(f"Usage dashboard: {url}")
+    print("Press Ctrl+C to stop.")
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+    return 0
+
+
 def main() -> int:
     args = parse_args()
-    if args.once:
-        return render(args)
 
     pricing = load_pricing(args.pricing, args.price, not args.no_builtin_pricing)
     tz = resolve_timezone(args.timezone)
+
+    if args.serve:
+        return run_serve(args, pricing, tz)
+
+    if args.once:
+        return render(args, pricing=pricing, tz=tz)
+
     current_tab = args.tab
     history_period = "7d"
 

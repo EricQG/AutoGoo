@@ -3,73 +3,38 @@ name: auto-goo:goo-usage
 description: 显示 Claude Code token 和 usage 监控面板 — 多色可视化终端仪表盘
 ---
 
+## 执行流程
+
+加载此命令后，**先使用 AskUserQuestion 询问用户**：
+
+- 问题: "How do you want to view the usage dashboard?"
+- 选项 1: "Browser popup with auto-refresh" — 浏览器 HTML 仪表盘，自动刷新
+- 选项 2: "Inline (interactive TUI)" — 当前终端内交互式 TUI
+
+### 选项 1: 浏览器 HTML 仪表盘
+
+启动内建 HTTP 服务器，自动打开浏览器：
+
 ```bash
-auto_goo_root="${AUTO_GOO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$HOME/workspace/AutoGoo}}"
-script="$auto_goo_root/skills/auto-goo/scripts/goo-usage.py"
-interval="${GOO_USAGE_INTERVAL:-30}"
-
-# ── Detect available terminal emulator ──
-detect_terminal() {
-    for cmd in gnome-terminal xfce4-terminal konsole xterm alacritty kitty tilix terminator; do
-        if command -v "$cmd" &>/dev/null; then
-            echo "$cmd"
-            return
-        fi
-    done
-    return 1
-}
-
-# ── Launch in separate terminal with watch ──
-launch_watch() {
-    local term
-    term=$(detect_terminal) || { echo "No terminal emulator found, running inline"; return 1; }
-    local watch_cmd="watch -n $interval -c -t python3 '$script' --once --tab '${1:-overview}'"
-
-    case "$term" in
-        gnome-terminal)
-            gnome-terminal -- bash -c "$watch_cmd; echo 'Press Enter to close...'; read" &
-            ;;
-        xfce4-terminal)
-            xfce4-terminal -e "bash -c '$watch_cmd; echo Press Enter to close...; read'" &
-            ;;
-        konsole)
-            konsole -e bash -c "$watch_cmd; echo 'Press Enter to close...'; read" &
-            ;;
-        xterm)
-            xterm -e bash -c "$watch_cmd; echo 'Press Enter to close...'; read" &
-            ;;
-        alacritty)
-            alacritty -e bash -c "$watch_cmd; echo 'Press Enter to close...'; read" &
-            ;;
-        kitty)
-            kitty bash -c "$watch_cmd; echo 'Press Enter to close...'; read" &
-            ;;
-        tilix)
-            tilix -e "bash -c '$watch_cmd; echo Press Enter to close...; read'" &
-            ;;
-        terminator)
-            terminator -e "bash -c '$watch_cmd; echo Press Enter to close...; read'" &
-            ;;
-        *)
-            echo "Unknown terminal: $term, running inline"
-            return 1
-            ;;
-    esac
-    echo "Launched usage monitor in $term (refresh: ${interval}s)"
-}
-
-# ── Ask user ──
-echo "Open goo-usage in separate terminal with watch? [y/N]"
-read -r REPLY
-if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-    if launch_watch "${GOO_USAGE_TAB:-overview}"; then
-        exit 0
-    fi
-fi
-
-# ── Run inline (interactive TUI) ──
-python3 "$script" --interval "$interval" $ARGS
+python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --serve --interval 30 &
+sleep 1
 ```
+
+然后告知用户浏览器地址 `http://localhost:9876`。
+
+如果 `--serve` 无法自动打开浏览器，手动用以下方式打开：
+- VS Code: 用 Simple Browser 或内置浏览器打开 `http://localhost:9876`
+- 终端: `xdg-open http://localhost:9876` 或 `open http://localhost:9876`
+
+关闭方式：Ctrl+C 停止服务器，或关闭浏览器后 kill 后台进程。
+
+### 选项 2: 内联 TUI
+
+```bash
+python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --interval 30
+```
+
+先让用户 approve 此命令。
 
 ## 仪表盘
 

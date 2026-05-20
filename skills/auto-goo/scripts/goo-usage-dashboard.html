@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Usage</title>
+<style>
+:root {
+    --bg: #0d1117; --card: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --yellow: #d29922; --orange: #db6d28; --red: #f85149;
+    --blue: #58a6ff; --purple: #bc8cff; --pink: #f778ba; --teal: #39d353;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; padding: 24px 32px; min-height: 100vh; }
+h1 { font-size: 22px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+.subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+.tab-btn { background: none; border: none; color: var(--muted); padding: 8px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; font-family: inherit; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.metric { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.metric-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.metric-value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.metric-value.green { color: var(--green); }
+.metric-value.cyan { color: var(--accent); }
+.metric-value.yellow { color: var(--yellow); }
+.section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.section-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+/* Grid-based bar rows for proper column alignment */
+.bar-grid { display: grid; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.bar-grid.overview { grid-template-columns: 130px 100px 60px 1fr auto; }
+.bar-grid.models { grid-template-columns: 220px 100px 60px 1fr auto; }
+.bar-grid.tiny { grid-template-columns: 150px 100px 1fr; }
+.bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-tokens { text-align: right; font-variant-numeric: tabular-nums; }
+.bar-pct { text-align: right; color: var(--muted); font-size: 12px; }
+.bar-track-col { flex: 1; min-width: 0; }
+.bar-track { height: 14px; border-radius: 4px; overflow: hidden; }
+.cost-col { color: var(--yellow); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.sparkline { font-family: monospace; font-size: 14px; letter-spacing: 1px; line-height: 1; white-space: pre; color: var(--green); }
+.period-select { display: flex; gap: 6px; margin-bottom: 16px; }
+.period-btn { background: var(--bg); border: 1px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+.period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.refresh-bar { display: flex; align-items: center; gap: 8px; margin-top: 24px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.refresh-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.refresh-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s linear; }
+.empty-state { color: var(--muted); font-size: 14px; padding: 24px; text-align: center; }
+.model-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.model-card h3 { font-size: 15px; margin-bottom: 10px; }
+.model-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; font-size: 13px; }
+.model-stats span { color: var(--muted); }
+.history-grid { display: grid; grid-template-columns: 90px 110px 1fr 80px auto; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 13px; }
+.history-day { color: var(--muted); }
+.history-tok { text-align: right; font-variant-numeric: tabular-nums; }
+.history-msg { color: var(--muted); text-align: right; }
+</style>
+</head>
+<body>
+<h1>Claude Code Usage</h1>
+<div class="subtitle" id="header-info">Loading...</div>
+<div class="tabs">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="projects">Projects</button>
+    <button class="tab-btn" data-tab="models">Models</button>
+    <button class="tab-btn" data-tab="history">History</button>
+</div>
+<div id="tab-overview" class="tab-content active"></div>
+<div id="tab-projects" class="tab-content"></div>
+<div id="tab-models" class="tab-content"></div>
+<div id="tab-history" class="tab-content"></div>
+<div class="refresh-bar">
+    <span>Auto-refresh:</span>
+    <div class="refresh-track"><div class="refresh-fill" id="refresh-fill" style="width:0%"></div></div>
+    <span id="refresh-countdown">30s</span>
+</div>
+<script>
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var COLORS = ['#58a6ff','#3fb950','#bc8cff','#d29922','#f778ba','#db6d28','#39d353','#a371f7','#79c0ff','#56d364','#e2b714','#ff7b72','#f0883e'];
+function modelColor(n) { var h=0; for(var i=0;i<n.length;i++)h=((h<<5)-h)+n.charCodeAt(i)|0; return COLORS[Math.abs(h)%COLORS.length]; }
+function fmtInt(v) { if(v>=1e6)return (v/1e6).toFixed(1)+'M'; if(v>=1e3)return (v/1e3).toFixed(1)+'K'; return String(v); }
+function fmtIntFull(v) { return v.toLocaleString(); }
+function fmtMoney(v) { return '$'+v.toFixed(v<0.01?4:2); }
+var SPARK=' ▁▂▃▄▅▆▇█';
+function sparkline(vals, w) { w=w||40; if(!vals||!vals.length)return SPARK[0].repeat(w); var max=Math.max.apply(null,vals); if(max<=0)return SPARK[0].repeat(w); var n=vals.length,res=''; for(var i=0;i<w;i++){ var idx=i*n/w,lo=Math.floor(idx),hi=Math.min(lo+1,n-1),frac=idx-lo; var v=vals[lo]*(1-frac)+vals[hi]*frac; res+=SPARK[Math.min(8,Math.floor(v/max*8))]; } return res; }
+
+function el(tag, cls) { var e=document.createElement(tag); if(cls)e.className=cls; return e; }
+function cel(tag, cls, text) { var e=el(tag,cls); if(text!=null)e.textContent=text; return e; }
+
+/* Build a gradient bar fill as inline spans inside a bar-track div */
+function barFill(pct, w, greenTint) {
+    var d=el('div','bar-track'); w=w||30;
+    var fill=Math.round(w*Math.max(0,Math.min(100,pct))/100);
+    for(var i=0;i<fill;i++){
+        var r=i/(w-1||1), cr, cg, cb=greenTint?40:0;
+        if(r<0.4){cr=Math.floor(r/0.4*255);cg=255;}
+        else if(r<0.7){cr=255;cg=Math.floor((1-(r-0.4)/0.3)*255);}
+        else{cr=255;cg=Math.floor((1-(r-0.7)/0.3)*100);}
+        var s=el('span'); s.style.cssText='display:inline-block;width:8px;height:12px;background:rgb('+cr+','+cg+','+cb+');border-radius:2px;margin-right:1px;vertical-align:middle';
+        d.appendChild(s);
+    }
+    return d;
+}
+
+/* Grid row helpers */
+function makeBarRow(gridClass, cells) {
+    var row=el('div',gridClass);
+    cells.forEach(function(c){
+        var cell=el('div',c.cls||'');
+        if(c.style)cell.style.cssText=c.style;
+        if(c.text!=null)cell.textContent=c.text;
+        if(c.child)cell.appendChild(c.child);
+        row.appendChild(cell);
+    });
+    return row;
+}
+
+var currentTab='overview', historyPeriod='7d', interval=30, countdownTimer=0;
+
+/* ── Overview ──────────────────────────────────────────────── */
+function renderOverview(d) {
+    var root=el('div');
+    if(!d.tokens) { root.appendChild(cel('div','empty-state','No usage records for today.')); return root; }
+    var metrics=el('div','metrics');
+    var items=[
+        {l:'Total Tokens',v:fmtIntFull(d.tokens),c:'green'},
+        {l:'Messages',v:fmtIntFull(d.messages),c:'cyan'},
+        {l:'Sessions',v:fmtIntFull(d.sessions),c:''},
+    ];
+    if(d.cost>0) items.push({l:'Est. Cost',v:fmtMoney(d.cost),c:'yellow'});
+    var rate=d.minutes>0?Math.round(d.tokens/d.minutes):0;
+    items.push({l:'Burn Rate',v:fmtInt(rate)+'/min',c:'',clr:'#db6d28'});
+    items.forEach(function(m){
+        var md=el('div','metric');
+        md.appendChild(cel('div','metric-label',m.l));
+        var mv=cel('div','metric-value',m.v); if(m.c)mv.classList.add(m.c); if(m.clr)mv.style.color=m.clr;
+        md.appendChild(mv); metrics.appendChild(md);
+    });
+    root.appendChild(metrics);
+
+    /* Token composition */
+    var bd=d.breakdown||{}, total=d.tokens||1;
+    var ti=[['Input',bd.input_tokens||0,'#58a6ff'],['Output',bd.output_tokens||0,'#3fb950'],['Cache Create',bd.cache_creation_input_tokens||0,'#db6d28'],['Cache Read',bd.cache_read_input_tokens||0,'#bc8cff']];
+    var sec1=el('div','section'); sec1.appendChild(cel('div','section-title','Token Composition'));
+    ti.forEach(function(it){
+        var pct=total>0?it[1]/total*100:0;
+        sec1.appendChild(makeBarRow('bar-grid overview', [
+            {cls:'bar-name',text:it[0],style:'color:'+it[2]},
+            {cls:'bar-tokens',text:fmtIntFull(it[1]),style:'color:'+it[2]},
+            {cls:'bar-pct',text:pct.toFixed(1)+'%'},
+            {cls:'bar-track-col',child:barFill(it[1]/total*100,25,true)},
+        ]));
+    });
+    root.appendChild(sec1);
+
+    /* Model usage */
+    var models=(d.models||[]).slice(0,5);
+    if(models.length){
+        var sec2=el('div','section'); sec2.appendChild(cel('div','section-title','Model Usage'));
+        var maxM=Math.max.apply(null,models.map(function(m){return m.tokens;}))||1;
+        models.forEach(function(m){
+            var pct=d.tokens>0?m.tokens/d.tokens*100:0;
+            var cells=[
+                {cls:'bar-name',text:m.name.substring(0,32),style:'color:'+modelColor(m.name)},
+                {cls:'bar-tokens',text:fmtIntFull(m.tokens),style:'color:#3fb950'},
+                {cls:'bar-pct',text:pct.toFixed(1)+'%'},
+                {cls:'bar-track-col',child:barFill(m.tokens/maxM*100,22,true)},
+            ];
+            if(m.cost>0) cells.push({cls:'cost-col',text:fmtMoney(m.cost)});
+            sec2.appendChild(makeBarRow('bar-grid models', cells));
+        });
+        root.appendChild(sec2);
+    }
+
+    /* Hourly sparkline */
+    var hourly=d.hourly||[];
+    if(hourly.some(function(h){return h>0;})){
+        var sec3=el('div','section'); sec3.appendChild(cel('div','section-title','Hourly Activity'));
+        sec3.appendChild(cel('div','sparkline',sparkline(hourly.map(Number),55)));
+        var peak=hourly.indexOf(Math.max.apply(null,hourly));
+        var pi=el('div'); pi.style.cssText='margin-top:8px;font-size:13px;color:var(--muted)';
+        pi.appendChild(document.createTextNode('Peak: '));
+        var st=el('strong'); st.style.color='#c9d1d9'; st.textContent=String(peak).padStart(2,'0')+':00';
+        pi.appendChild(st); pi.appendChild(document.createTextNode(' — '+fmtIntFull(hourly[peak])+' tokens'));
+        sec3.appendChild(pi); root.appendChild(sec3);
+    }
+
+    /* Top projects */
+    var projs=(d.projects||[]).slice(0,6);
+    if(projs.length){
+        var sec4=el('div','section'); sec4.appendChild(cel('div','section-title','Top Projects'));
+        var maxP=Math.max.apply(null,projs.map(function(p){return p.tokens;}))||1;
+        projs.forEach(function(p){
+            sec4.appendChild(makeBarRow('bar-grid tiny', [
+                {cls:'bar-name',text:p.name.substring(0,24),style:'color:'+modelColor(p.name)},
+                {cls:'bar-tokens',text:fmtIntFull(p.tokens),style:'color:#3fb950'},
+                {cls:'bar-track-col',child:barFill(p.tokens/maxP*100,18)},
+            ]));
+        });
+        root.appendChild(sec4);
+    }
+    return root;
+}
+
+/* ── Projects ──────────────────────────────────────────────── */
+function renderProjects(d) {
+    var root=el('div');
+    if(!d.tokens){ root.appendChild(cel('div','empty-state','No usage records for today.')); return root; }
+    var projects=d.projects||[];
+    if(!projects.length){ root.appendChild(cel('div','empty-state','No project data.')); return root; }
+    var metrics=el('div','metrics');
+    [{l:'Total Tokens',v:fmtIntFull(d.tokens),c:'green'},{l:'Projects',v:String(projects.length),c:''}].forEach(function(m){
+        var md=el('div','metric'); md.appendChild(cel('div','metric-label',m.l));
+        var mv=cel('div','metric-value',m.v); if(m.c)mv.classList.add(m.c); md.appendChild(mv); metrics.appendChild(md);
+    });
+    if(d.cost>0){ var md=el('div','metric'); md.appendChild(cel('div','metric-label','Est. Cost')); md.appendChild(cel('div','metric-value yellow',fmtMoney(d.cost))); metrics.appendChild(md); }
+    root.appendChild(metrics);
+
+    var maxP=Math.max.apply(null,projects.map(function(p){return p.tokens;}))||1;
+    var sec=el('div','section'); sec.appendChild(cel('div','section-title','Project Breakdown'));
+    /* Header row */
+    sec.appendChild(makeBarRow('bar-grid models', [
+        {cls:'bar-name',text:'Project',style:'color:var(--muted);font-size:11px;text-transform:uppercase'},
+        {cls:'bar-tokens',text:'Tokens',style:'color:var(--muted);font-size:11px'},
+        {cls:'',text:'Msgs',style:'color:var(--muted);font-size:11px;text-align:right;min-width:50px'},
+        {cls:'bar-track-col',text:'Distribution',style:'color:var(--muted);font-size:11px'},
+    ]));
+    projects.slice(0,15).forEach(function(p){
+        var cells=[
+            {cls:'bar-name',text:p.name.substring(0,25),style:'color:'+modelColor(p.name)},
+            {cls:'bar-tokens',text:fmtIntFull(p.tokens),style:'color:#3fb950'},
+            {cls:'',text:fmtInt(p.messages),style:'color:var(--muted);text-align:right;min-width:50px'},
+            {cls:'bar-track-col',child:barFill(p.tokens/maxP*100,18,true)},
+        ];
+        if(p.cost>0) cells.push({cls:'cost-col',text:fmtMoney(p.cost)});
+        sec.appendChild(makeBarRow('bar-grid models', cells));
+    });
+    if(projects.length>15) sec.appendChild(cel('div',null,'... and '+(projects.length-15)+' more projects')).style.cssText='color:var(--muted);font-size:12px;margin-top:8px';
+    root.appendChild(sec);
+    return root;
+}
+
+/* ── Models ─────────────────────────────────────────────────── */
+function renderModels(d) {
+    var root=el('div'), models=d.models||[];
+    if(!models.length){ root.appendChild(cel('div','empty-state','No model data.')); return root; }
+    var total=d.tokens||1;
+    models.forEach(function(m){
+        var card=el('div','model-card');
+        var h3=cel('h3',null,m.name); h3.style.color=modelColor(m.name); card.appendChild(h3);
+        var stats=el('div','model-stats');
+        var pct=m.tokens/total*100, eff=Math.round(m.tokens/Math.max(1,m.messages));
+        var inT=(m.input_tokens||0)+(m.cache_create||0), outT=m.output_tokens||0;
+        var io=inT>0?(outT/inT*100).toFixed(1):'0';
+        var cache=(m.cache_read||0), cacheRate=inT+cache>0?(cache/(inT+cache)*100).toFixed(1):'0';
+
+        function addStat(label, val, suf, clr) {
+            var div=el('div'); var sp=el('span'); sp.textContent=label; div.appendChild(sp);
+            var strong=el('strong'); strong.textContent=val; if(clr)strong.style.color=clr; div.appendChild(strong);
+            if(suf){ var txt=document.createTextNode(suf); div.appendChild(txt); }
+            stats.appendChild(div);
+        }
+        addStat('Tokens: ',fmtIntFull(m.tokens),' ('+pct.toFixed(1)+'%)','#3fb950');
+        addStat('Messages: ',fmtIntFull(m.messages),'  |  Efficiency: '+fmtInt(eff)+' tok/msg','#58a6ff');
+        addStat('I/O Ratio: ',io+'% output',null,'#58a6ff');
+        addStat('Cache Hit: ',cacheRate+'%',' ('+fmtIntFull(cache)+' cached)',Number(cacheRate)>30?'#bc8cff':'#d29922');
+        if(m.cost>0) addStat('Cost: ',fmtMoney(m.cost),'  |  per msg: '+fmtMoney(m.cost/Math.max(1,m.messages)),'#d29922');
+        card.appendChild(stats); root.appendChild(card);
+    });
+    return root;
+}
+
+/* ── History ────────────────────────────────────────────────── */
+function renderHistory(data) {
+    var root=el('div');
+    if(!data||!data.length){
+        root.appendChild(cel('div','empty-state','No records for this period.'));
+        return root;
+    }
+
+    var totalTok=data.reduce(function(s,d){return s+(d.tokens||0);},0);
+    var totalMsg=data.reduce(function(s,d){return s+(d.messages||d.records||0);},0);
+    var totalCost=data.reduce(function(s,d){return s+(d.cost||0);},0);
+
+    var metrics=el('div','metrics');
+    [{l:'Total Tokens',v:fmtIntFull(totalTok),c:'green'},{l:'Messages',v:fmtIntFull(totalMsg),c:'cyan'}].forEach(function(m){
+        var md=el('div','metric'); md.appendChild(cel('div','metric-label',m.l));
+        md.appendChild(cel('div','metric-value '+(m.c||''),m.v)); metrics.appendChild(md);
+    });
+    if(totalCost>0){ var md=el('div','metric'); md.appendChild(cel('div','metric-label','Total Cost')); md.appendChild(cel('div','metric-value yellow',fmtMoney(totalCost))); metrics.appendChild(md); }
+    root.appendChild(metrics);
+
+    var vals=data.map(function(d){return d.tokens||0;});
+    if(vals.length){
+        var secS=el('div','section');
+        secS.appendChild(cel('div','section-title','Trend'));
+        secS.appendChild(cel('div','sparkline',sparkline(vals,55)));
+        root.appendChild(secS);
+    }
+
+    var maxV=Math.max.apply(null,vals)||1;
+    var sec=el('div','section');
+    sec.appendChild(cel('div','section-title','Daily Breakdown'));
+
+    data.forEach(function(d){
+        var row=el('div','history-grid');
+        row.appendChild(cel('div','history-day',d.name));
+        var tok=cel('div','history-tok',fmtIntFull(d.tokens||0)); tok.style.color='#3fb950'; row.appendChild(tok);
+        row.appendChild(barFill(maxV>0?d.tokens/maxV*100:0,25));
+        row.appendChild(cel('div','history-msg',fmtInt(d.messages||d.records||0)+' msgs'));
+        if(d.cost>0){ var cst=cel('div','cost-col',fmtMoney(d.cost)); row.appendChild(cst); }
+        sec.appendChild(row);
+    });
+    root.appendChild(sec);
+
+    if(data.length>=4){
+        var recent=data.slice(-3).reduce(function(s,d){return s+(d.tokens||0);},0);
+        var prior=data.slice(-6,-3).reduce(function(s,d){return s+(d.tokens||0);},0);
+        if(prior>0){
+            var chg=(recent-prior)/prior*100, arrow=chg>0?'▲':'▼';
+            var clr=Math.abs(chg)>15?(chg>0?'#f85149':'#3fb950'):'#d29922';
+            var trend=el('div'); trend.style.cssText='font-size:13px;color:var(--muted);margin-top:12px';
+            trend.appendChild(document.createTextNode('3-Day Trend: '));
+            var st=el('strong'); st.style.color=clr; st.textContent=arrow+' '+Math.abs(chg).toFixed(1)+'%';
+            trend.appendChild(st);
+            trend.appendChild(document.createTextNode(' vs prior 3 days'));
+            var help=el('span'); help.style.cssText='color:var(--border);cursor:help;margin-left:4px';
+            help.textContent='ⓘ';
+            help.title='Compares total tokens of the last 3 days vs the 3 days before that.\n▲/▼ = increase/decrease. Red: >15% up, Green: >15% down, Yellow: within ±15%.';
+            trend.appendChild(help);
+            root.appendChild(trend);
+        }
+    }
+    return root;
+}
+
+/* ── Data loading ───────────────────────────────────────────── */
+function loadData() {
+    fetch('/api/data').then(function(r){return r.json();}).then(function(d){
+        document.getElementById('header-info').textContent='Updated: '+(d.updated||'');
+        interval=(d.interval||30);
+        var tabs=['overview','projects','models'];
+        tabs.forEach(function(t){
+            var el=document.getElementById('tab-'+t);
+            while(el.firstChild)el.removeChild(el.firstChild);
+            var fn=t==='overview'?renderOverview:t==='projects'?renderProjects:renderModels;
+            el.appendChild(fn(d));
+        });
+    }).catch(function(e){ console.error('loadData error:',e); });
+}
+
+function loadHistory() {
+    var url='/api/history?period='+encodeURIComponent(historyPeriod||'7d');
+    fetch(url).then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+    }).then(function(data){
+        var hc=document.getElementById('history-content');
+        if(!hc){ console.error('history-content element not found'); return; }
+        while(hc.firstChild)hc.removeChild(hc.firstChild);
+        hc.appendChild(renderHistory(data));
+    }).catch(function(e){ console.error('loadHistory error:',e); });
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});
+    var btn=document.querySelector('[data-tab="'+tab+'"]'); if(btn)btn.classList.add('active');
+    var ct=document.getElementById('tab-'+tab); if(ct)ct.classList.add('active');
+    currentTab=tab;
+    if(tab==='history') loadHistory();
+}
+
+function startRefresh() {
+    var elapsed=0;
+    function tick(){
+        elapsed++;
+        var pct=Math.min(100,elapsed/interval*100);
+        document.getElementById('refresh-fill').style.width=pct+'%';
+        document.getElementById('refresh-countdown').textContent=Math.max(0,Math.round(interval-elapsed))+'s';
+        if(elapsed>=interval){ elapsed=0; loadData(); if(currentTab==='history')loadHistory(); }
+    }
+    if(countdownTimer)clearInterval(countdownTimer);
+    countdownTimer=setInterval(tick,1000);
+}
+
+/* ── Init ───────────────────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.addEventListener('click',function(){switchTab(b.dataset.tab);});
+});
+
+/* Setup history tab with period buttons */
+var histTab=document.getElementById('tab-history');
+var ps=el('div','period-select');
+['7d','30d','all'].forEach(function(p,n){
+    var labels=['7 Days','30 Days','All Time'];
+    var btn=el('button','period-btn'); btn.dataset.period=p; btn.textContent=labels[n];
+    if(n===0)btn.classList.add('active'); ps.appendChild(btn);
+});
+histTab.appendChild(ps);
+var hc=el('div'); hc.id='history-content'; histTab.appendChild(hc);
+
+ps.querySelectorAll('.period-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+        ps.querySelectorAll('.period-btn').forEach(function(p){p.classList.remove('active');});
+        this.classList.add('active'); historyPeriod=this.dataset.period; loadHistory();
+    });
+});
+
+loadData(); startRefresh();
+setInterval(function(){ loadData(); if(currentTab==='history')loadHistory(); }, (interval||30)*1000);
+</script>
+</body>
+</html>

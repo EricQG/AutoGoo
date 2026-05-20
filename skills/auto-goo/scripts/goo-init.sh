@@ -217,27 +217,6 @@ PY
   chmod 600 "$secrets_file"
 }
 
-warn_if_sshpass_missing() {
-  if command -v sshpass >/dev/null 2>&1; then
-    echo "  sshpass:   installed"
-    return
-  fi
-
-  cat <<'EOF'
-  sshpass:   not installed
-
-Password-based AutoGoo SSH helper requires sshpass.
-Install it before using goo-ssh.sh:
-
-  sudo apt install sshpass
-
-Manual fallback still works:
-
-  ssh -p <port> <user>@<host>
-
-EOF
-}
-
 if [[ -z "$SCOPE" ]]; then
   if [[ ! -t 0 ]]; then
     echo "error: cannot choose init scope in non-interactive mode" >&2
@@ -318,11 +297,7 @@ if [[ -t 0 && "$YES" -ne 1 ]]; then
         echo "Purpose is required, skipping this server."
         break
       fi
-      SERVER_PASS="$(prompt_secret "Password (input hidden)")"
-      if [[ -z "$SERVER_PASS" ]]; then
-        echo "Password is required, skipping this server."
-        break
-      fi
+      SERVER_PASS="$(prompt_secret "Password (input hidden, Enter to skip)")"
 
       save_server_secrets "$SECRETS_FILE" "$SERVER_IP" "$SERVER_USER" "$SERVER_PASS"
 
@@ -338,9 +313,6 @@ if [[ -t 0 && "$YES" -ne 1 ]]; then
       fi
     done
     SERVERS_JSON="$SERVERS_JSON]"
-    if [[ "$SERVERS_JSON" != "[]" ]]; then
-      warn_if_sshpass_missing
-    fi
   fi
 fi
 

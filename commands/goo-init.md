@@ -23,7 +23,7 @@ description: 初始化 AutoGoo 配置 — 支持用户级 ~/.auto-goo/config.jso
 
 ## 行为
 
-该命令使用 **Agent 交互模式 + 脚本落盘**：主 Agent 负责用对话问清配置项、确认覆盖风险和解释结果；最终仍由初始化脚本写入文件。slash command 的当前工作目录通常是用户项目，不一定是插件目录；脚本执行前必须先解析 AutoGoo 根目录，不能在 `AUTO_GOO_ROOT` 和 `CLAUDE_PLUGIN_ROOT` 都为空时拼出 `/skills/...`：
+该命令使用 **Agent 交互模式 + 脚本落盘**：主 Agent 收到命令后直接开始交互提问，不预先检查环境；脚本内部自行处理已有配置的检测和覆盖确认。slash command 的当前工作目录通常是用户项目，不一定是插件目录；脚本执行前必须先解析 AutoGoo 根目录，不能在 `AUTO_GOO_ROOT` 和 `CLAUDE_PLUGIN_ROOT` 都为空时拼出 `/skills/...`：
 
 ```bash
 auto_goo_root="${AUTO_GOO_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}"
@@ -47,7 +47,7 @@ bash "$auto_goo_root/skills/auto-goo/scripts/goo-init.sh" <用户选择的作用
 1. 配置作用域：`--user` 还是 `--project`
 2. Goo-wiki 路径：向用户展示默认路径 `~/workspace/Goo-wiki`；用户不输入或选择默认时就使用该路径，也可输入自定义路径
 
-项目级初始化时，还应通过对话确认是否更新项目 `CLAUDE.md`；需要远程服务器配置时，由主 Agent 收集服务器类型、IP、端口、用户名和用途说明，再调用脚本进入密码录入或传递非敏感参数。密码不得在聊天中明文输出。
+项目级初始化时，还应通过对话确认是否更新项目 `CLAUDE.md`；需要远程服务器配置时，由主 Agent 通过 `AskUserQuestion` 逐字段收集，每个问题提供 2 个选项（一个推荐默认值 + 一个常用备选），用户可通过系统自动提供的 "Other" 选项输入自定义值。服务器非敏感参数（类型、IP、端口、用户名、用途）全部收集完成后，再调用脚本进入密码录入。密码不得在聊天中明文输出。
 
 例如用户选择 `--user` 且不输入路径（使用默认路径）时，必须运行：
 
@@ -100,28 +100,30 @@ bash "$auto_goo_root/skills/auto-goo/scripts/goo-init.sh" --project --wiki-dir ~
 
 Agent 交互流程：
 
-1. 读取用户已给参数，缺什么问什么；不要一次性抛出长问卷。
-2. 明确告诉用户将写入的位置：`~/.auto-goo/config.json` 或 `.goo/config.json`。
-3. 如目标配置已存在，先读取摘要并询问是否覆盖或更新；如果用户选择保留 config，但传了 `--update-claude-md` 或交互确认更新 `CLAUDE.md`，脚本仍必须继续更新项目 `CLAUDE.md`，不得提前退出。
-4. 预检查只用于收集信息，不能中断交互流程。检查 `.goo/config.json`、`.goo/`、git remote、wiki 路径等可选状态时，必须让每个可失败命令独立容错，例如 `cmd || true`；不要把可能返回非零的 git 探测和普通 `ls` 混在一个会导致 Bash tool 报错的命令里。
-5. 如果可选检查失败，只把它整理成普通状态说明，例如"未检测到 git remote"、"wiki 路径暂不可用"，继续询问下一项。
-6. 用户确认后，把已确认的 `--user/--project`、`--wiki-dir`、`--project-slug`、`--update-claude-md/--skip-claude-md` 等参数传给脚本。
+1. **不要先检查环境，直接开始交互提问。** 收到 `/auto-goo:goo-init` 后，不要先跑 `ls`、`git remote`、`test -f` 等探测命令，而是直接用 AskUserQuestion 或对话方式询问用户偏好。
+2. 读取用户已给参数，缺什么问什么；不要一次性抛出长问卷。
+3. 第一个问题：配置作用域，选项：「项目级 --project (Recommended)」「用户级 --user」
+4. 第二个问题：Goo-wiki 路径，选项：「~/workspace/Goo-wiki (Recommended)」「自定义路径（选择后在下方 Other 输入）」
+5. 项目级初始化时，继续询问：
+   - 是否更新项目 `CLAUDE.md`（`AskUserQuestion`，选项：「是 (Recommended)」「跳过」）
+   - 是否需要配置远程服务器（`AskUserQuestion`，选项：「否 (Recommended)」「是」）
+   - 如果用户选择配置服务器，逐字段使用 `AskUserQuestion` 收集非敏感参数。**每个问题必须至少 2 个显式选项**（系统的自动 Other 不算在内）。用户可直接选用预设值，或通过 "Other" 输入自定义值：
+     - **服务器类型**：「GPU 服务器 (Recommended)」「CPU 服务器」
+     - **IP 地址**：「192.168.1.100」「10.0.0.1」
+     - **SSH 端口**：「22 (Recommended)」「2222」
+     - **用户名**：「ubuntu (Recommended)」「root」
+     - **用途说明**：「模型训练与推理」「数据处理与预处理」
+     - **密码**：「稍后手动填入 (Recommended)」「输入密码」— 用户可输入密码，也可选默认跳过。如果跳过，提示用户密码存储在 `<项目级 .goo/secrets.json 或用户级 ~/.auto-goo/secrets.json>`（chmod 600），可稍后编辑该文件补填 `password` 字段。
+     - 每台服务器配置完后询问「是否添加另一台服务器？」
+     - 所有服务器信息收集完后，汇总展示给用户确认，然后调用脚本落盘。
+6. 用户回答完所有问题后，把已确认的 `--user/--project`、`--wiki-dir`、`--project-slug`、`--update-claude-md/--skip-claude-md` 等参数传给脚本。脚本内部自行处理已存在配置的检测和覆盖确认。
 7. 脚本执行后读取结果摘要，向用户说明最终生效配置和 fallback 情况。
-
-预检查示例：
-
-```bash
-ls -la .goo/config.json 2>/dev/null || true
-ls -la .goo 2>/dev/null || true
-git remote -v 2>/dev/null || true
-test -f "$HOME/workspace/Goo-wiki/CLAUDE.md" && echo "wiki ready" || true
-```
 
 脚本落盘行为：
 
 1. **选择作用域** — 用户级或项目级；未传 `--user/--project` 时交互提问
 2. **创建配置目录** — 用户级确保 `~/.auto-goo/`；项目级确保 `.goo/`
-3. **读取已有配置** — 如果目标配置已存在，先展示当前配置并询问是否更新
+3. **读取已有配置** — 脚本自行检测目标配置是否已存在，存在时展示当前配置并询问是否更新
 4. **配置 Wiki 路径** — 必须向用户提供默认路径 `~/workspace/Goo-wiki`；用户不输入则使用默认路径，也允许用户输入自定义路径，并按优先级解析：
    - `AUTO_GOO_WIKI_DIR`
    - 项目级 `.goo/config.json` 的 `wiki_dir`
@@ -200,6 +202,7 @@ test -f "$HOME/workspace/Goo-wiki/CLAUDE.md" && echo "wiki ready" || true
 - `--project` 且项目是 Git repo 时，必须把 git remote 地址写入 `.goo/config.json.archive.git_remote_url`；Goo-wiki 可用时同步写入 `<wiki_dir>/wiki/projects/<project_slug>/index.md`
 - `--project` 且 Goo-wiki 可用时，必须先询问用户是否更新 `CLAUDE.md`；用户同意后只追加或更新由 AutoGoo marker 包裹的归档原则段落，不重写其他内容
 - 初始化交互由主 Agent 负责；不得派发 Subagent 或用临时代码替代脚本写配置
+- 配置完成后，脚本不得尝试连接服务器（不做 ssh、ping、端口探测等网络连接）；仅写入配置文件
 - 最终落盘必须先解析 `auto_goo_root`，再运行 `bash "$auto_goo_root/skills/auto-goo/scripts/goo-init.sh"`，并传入主 Agent 已确认的参数；不得在根目录变量为空时运行 `/skills/auto-goo/scripts/goo-init.sh`
 - 用户回答了 `--user` 或 `--project` 后，必须把该参数传给脚本
 - 用户确认或输入 wiki 路径后，必须把 `--wiki-dir <路径>` 传给脚本
