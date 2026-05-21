@@ -1,6 +1,6 @@
 ---
 name: goo-workflow
-description: "Use when the user says '/auto-goo:goo-init', '/auto-goo:goo-brainstorm', '/auto-goo:goo-plan', '/auto-goo:goo-start', '/auto-goo:goo-daily-report', '/auto-goo:goo-usage', '/auto-goo:usage-analyse', 'brainstorm', '找目标', '开始任务', 'run:', '日报', '周报', 'usage', 'token统计', 'token降本', '自改进', or gives a goal-clear multi-step task that can be decomposed into sub-tasks. Runs Goo workflow: config init, wiki-based brainstorm, wiki recall, DAG planning, subagent execution, status, optimization, Goo-wiki archiving, usage monitor, usage cost analysis, daily reports, and plugin self-improvement. Requires Read, Write, Edit, Bash, WebSearch, Agent tools."
+description: "Use when the user says '/auto-goo:goo-init', '/auto-goo:goo-brainstorm', '/auto-goo:goo-plan', '/auto-goo:goo-start', '/auto-goo:goo-daily-report', '/auto-goo:goo-usage', '/auto-goo:goo-usage-analyse', 'brainstorm', '找目标', '开始任务', 'run:', '日报', '周报', 'usage', 'token统计', 'token降本', '自改进', or gives a goal-clear multi-step task that can be decomposed into sub-tasks. Runs Goo workflow: config init, wiki-based brainstorm, wiki recall, DAG planning, subagent execution, status, optimization, Goo-wiki archiving, usage monitor, usage cost analysis, daily reports, and plugin self-improvement. Requires Read, Write, Edit, Bash, WebSearch, Agent tools."
 version: 0.1.0
 tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 ---
@@ -21,9 +21,9 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 - `/auto-goo:goo-start <任务>`：执行完整流程，必要时可先生成 plan 再继续执行。
 - `/auto-goo:goo-daily-report [日期|范围]`：扫描 Claude Code / Codex 会话，生成 Goo-wiki 日报或周报素材。
 - `/auto-goo:goo-usage [参数]`：扫描 Claude Code usage 日志，参考 Claude-Code-Usage-Monitor 的终端界面风格渲染今天总 token、项目分布、模型分布和可选 cost 面板。
-- `/auto-goo:usage-analyse [项目|范围]`：结合 usage 热点和 Goo-wiki 项目知识，归因 token 开销并生成可落地节省方案。
+- `/auto-goo:goo-usage-analyse [项目|范围]`：结合 usage 热点和 Goo-wiki 项目知识，归因 token 开销并生成可落地节省方案。
 
-**内容输出归档铁律**：除纯状态查看、纯初始化配置或用户明确要求不归档外，任何产生可复用内容的命令都必须归档到 Goo-wiki。包括 `/auto-goo:goo-brainstorm` 的候选 goals、`/auto-goo:usage-analyse` 的降本报告、`/auto-goo:goo-daily-report` 的日报/周报、`/auto-goo:goo-improve` 的改进建议、benchmark/plan/start/continue 的计划与执行经验。Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback；不得只写 `.goo/*.json` 或只在聊天中展示。
+**内容输出归档铁律**：除纯状态查看、纯初始化配置或用户明确要求不归档外，任何产生可复用内容的命令都必须归档到 Goo-wiki。包括 `/auto-goo:goo-brainstorm` 的候选 goals、`/auto-goo:goo-usage-analyse` 的降本报告、`/auto-goo:goo-daily-report` 的日报/周报、`/auto-goo:goo-improve` 的改进建议、benchmark/plan/start/continue 的计划与执行经验。Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback；不得只写 `.goo/*.json` 或只在聊天中展示。
 
 ## Phase -1: 项目初始化
 

@@ -50,7 +50,7 @@ AutoGoo 不应强行覆盖：
 6. **归档沉淀**：将目标、计划、关键证据、产物、验证结果、决策和复用经验写入 Goo-wiki 或 `.goo/obsidian/` fallback。
 7. **自改进**：任务后记录流程问题；高频问题经用户确认后更新对应规范、脚本或 allowlist。
 
-内容输出类命令即使不进入完整执行 DAG，也必须完成归档沉淀。`goo-brainstorm`、`usage-analyse`、`goo-daily-report`、`goo-improve`、`goo-benchmark`、`goo-plan` 等只要产出可复用判断、候选目标、报告、指标、规则或经验，就要写入 Goo-wiki 项目路径并更新项目入口或 `log.md`；Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback，并在对应 `.goo/*.json` 产物记录 `archive` 字段。
+内容输出类命令即使不进入完整执行 DAG，也必须完成归档沉淀。`goo-brainstorm`、`goo-usage-analyse`、`goo-daily-report`、`goo-improve`、`goo-benchmark`、`goo-plan` 等只要产出可复用判断、候选目标、报告、指标、规则或经验，就要写入 Goo-wiki 项目路径并更新项目入口或 `log.md`；Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback，并在对应 `.goo/*.json` 产物记录 `archive` 字段。
 
 ## 状态与产物规范
 

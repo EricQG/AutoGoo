@@ -17,7 +17,7 @@ AutoGoo 的 wiki 流程分成两段：
 
 必须归档的内容输出包括：
 - `/auto-goo:goo-brainstorm` 的候选 goals、共同前置条件、推荐顺序和关键 wiki 证据。
-- `/auto-goo:usage-analyse` 的 usage 快照、成本归因、节省机会、候选 workflow rules 和后续动作。
+- `/auto-goo:goo-usage-analyse` 的 usage 快照、成本归因、节省机会、候选 workflow rules 和后续动作。
 - `/auto-goo:goo-daily-report` 的日报/周报。
 - `/auto-goo:goo-improve` 的流程摩擦、改进建议和采纳状态。
 - `/auto-goo:goo-benchmark`、`/auto-goo:goo-start`、`/auto-goo:goo-continue` 产生的指标、执行证据、优化经验和最终结论。
