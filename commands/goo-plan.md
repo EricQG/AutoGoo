@@ -11,13 +11,15 @@ description: 只生成 AutoGoo 执行计划 — 召回 Goo-wiki 经验并输出 
 
 1. **Wiki 经验召回** — 检索 Goo-wiki 中相关项目页、概念页、周报和 `log.md`
 2. **输入形态识别** — 判断输入是普通任务、Markdown 任务包、已有 plan、issue/PR 描述还是日志片段
-3. **任务解析** — 将任务拆解为 DAG 步骤
-4. **对话方案固化** — 抽取当前对话中已经形成的方案、取舍、约束、验收标准和用户明确偏好，写入 `context_digest`；内容过长时写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/<timestamp>-planning-context.md` 并在 plan 中引用
-5. **上下文注入** — 把可复用经验写入 `wiki_context`，把对话方案写入 `context_digest` 或 `context_artifacts`
-6. **归档任务补齐** — 默认在 DAG 最后追加 Wiki 归档步骤，依赖所有最终交付步骤
-7. **历史计划归档** — 如果 `.goo/plan.json` 已存在，先复制到 `.goo/plans/history/plan-<timestamp>.json`
-8. **计划落盘** — 输出或更新 `.goo/plan.json`
-9. **等待确认** — 不派发 Subagent，不执行文件修改
+3. **目标明确性检查** — 判断输入是否已有明确 goal，或是否引用了 `.goo/brainstorm.json` 中的候选 goal；否则停止 plan 流程并改用 `/auto-goo:goo-brainstorm`
+4. **Goal 识别** — 目标明确时抽取一个或多个 `goals[]`，每个 goal 写清交付物、验收标准、优先级和依赖关系
+5. **任务解析** — 将任务拆解为 DAG 步骤；每个非归档步骤绑定 `goal_id` 或 `goal_ids`
+6. **对话方案固化** — 抽取当前对话中已经形成的方案、取舍、约束、验收标准和用户明确偏好，写入 `context_digest`；内容过长时写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/<timestamp>-planning-context.md` 并在 plan 中引用
+7. **上下文注入** — 把可复用经验写入 `wiki_context`，把对话方案写入 `context_digest` 或 `context_artifacts`
+8. **归档任务补齐** — 默认在 DAG 最后追加 Wiki 归档步骤，依赖所有最终交付步骤，并按 goal 汇总归档
+9. **历史计划归档** — 如果 `.goo/plan.json` 已存在，先复制到 `.goo/plans/history/plan-<timestamp>.json`
+10. **计划落盘** — 输出或更新 `.goo/plan.json`
+11. **等待确认** — 不派发 Subagent，不修改业务文件，不运行实现命令；允许写入 `.goo/plan.json` 和必要的 `context_artifacts`
 
 ## Markdown 任务输入
 
@@ -29,6 +31,45 @@ description: 只生成 AutoGoo 执行计划 — 召回 Goo-wiki 经验并输出 
 - "目标/约束/验收/风险/产物/下一步"等小节必须转成 plan 约束。
 
 不要把 Markdown 默认理解为"整理文本"。只有用户明确说要总结、润色、改写或重新排版 Markdown 时，才生成文本处理计划。
+
+## 是否需要 Brainstorm
+
+`goo-plan` 不主动 brainstorm，只做目标明确性判断。
+
+### 直接生成 plan
+
+输入满足以下条件时，直接生成 `.goo/plan.json`：
+
+- 有明确交付物，例如代码修复、报告、README、数据集、训练产物、评测结果。
+- 有范围边界，例如文件、模块、项目、数据路径或问题域。
+- 有验收标准，或能从任务自然推导出验收方式。
+- 能拆出至少一个可执行 step。
+
+### 基于 brainstorm 结果生成 plan
+
+如果当前项目存在 `.goo/brainstorm.json`，且用户明确选择了候选 goal，例如"用 cg1 做 plan"、"把 cg1 和 cg3 合并规划"、"按 brainstorm 推荐的第一个目标执行"，则：
+
+1. 读取 `.goo/brainstorm.json`。
+2. 将选中的 `candidate_goals[]` 转成正式 `goals[]`。
+3. 把候选 goal 的 `expected_output` 写入 goal `outputs`。
+4. 把候选 goal 的 `acceptance_criteria` 写入正式 goal。
+5. 把 `prerequisites` 和 `readiness_checklist` 转成 plan 的前置检查 step 或对应 step 的 `validation` / `requires_user_confirm`。
+6. 再生成执行 DAG。
+
+### 先停止并要求 brainstorm
+
+以下情况不要写 `.goo/plan.json`：
+
+- 用户明确说不知道目标、想 brainstorm、想探索方向、想基于 wiki 找下一步。
+- 输入只有项目名、方向、现状或问题域，没有交付物。
+- 候选方向互相竞争，且没有选择或优先级。
+- 需要先从 Goo-wiki 归纳下一步目标。
+
+此时提示用户使用：
+
+```text
+/auto-goo:goo-brainstorm <方向/项目/问题>
+```
 
 ## 对话方案固化
 
@@ -57,10 +98,15 @@ description: 只生成 AutoGoo 执行计划 — 召回 Goo-wiki 经验并输出 
 ## 输出要求
 
 - `.goo/plan.json` 必须包含 `wiki_context`
+- 目标不明确时，不写 `.goo/plan.json`；改用 `/auto-goo:goo-brainstorm` 生成 `.goo/brainstorm.json`
+- 如果用户选择了 `.goo/brainstorm.json` 中的 candidate goal，必须把候选目标、前置条件和 ready checklist 转成正式 `goals[]` 与前置检查 step
+- `.goo/plan.json` 必须包含 `goals[]`；单目标任务也写一个默认 goal，多目标任务按交付目标分别写验收标准和产物
 - `.goo/plan.json` 必须包含 `context_digest`；没有额外对话方案时也写 `{"found": false, "decisions": [], "constraints": [], "acceptance_criteria": [], "open_questions": []}`
 - 如果存在大段方案材料，必须包含 `context_artifacts`，用文件路径引用 Goo-wiki 项目路径下的 `context/*.md` 或相关任务 Markdown；Goo-wiki 不可用时引用 `.goo/obsidian/<project-slug>/context/*.md`
 - 写入新的 `.goo/plan.json` 前，必须把已有 `.goo/plan.json` 原样归档到 `.goo/plans/history/`
 - 每个步骤必须包含 `output`，便于后续 `/auto-goo:goo-continue` 恢复
+- 每个非归档步骤必须包含 `goal_id` 或 `goal_ids`；共享准备、统一验证或统一归档步骤使用 `goal_ids`
+- 每个步骤应包含 `inputs`、`outputs`、`allowed_read_paths`、`allowed_write_paths` 和 `validation`，让执行阶段不依赖聊天记录猜测读写范围和验收方式
 - 每个步骤必须包含 `subagent`，明确执行角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`
 - `steps` 最后必须包含 Wiki 归档任务，默认名称为 `归档到 Goo-wiki`，依赖所有非归档叶子步骤
 - 如果没有找到相关 wiki 经验，写入 `wiki_context.found=false`

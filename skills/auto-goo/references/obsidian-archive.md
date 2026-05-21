@@ -11,6 +11,20 @@ AutoGoo 的 wiki 流程分成两段：
 
 归档不是附加项，也不是孤立报告，而是为了让下一次 AutoGoo 任务能沿着项目页、概念页、问题页、周报和日志之间的链接继续推进。
 
+## 内容输出命令归档
+
+除纯状态查看、纯初始化配置或用户明确要求不归档外，任何产生可复用内容的 AutoGoo 命令都必须写入 Goo-wiki，不能只保存在 `.goo/` 或聊天消息中。
+
+必须归档的内容输出包括：
+- `/auto-goo:goo-brainstorm` 的候选 goals、共同前置条件、推荐顺序和关键 wiki 证据。
+- `/auto-goo:usage-analyse` 的 usage 快照、成本归因、节省机会、候选 workflow rules 和后续动作。
+- `/auto-goo:goo-daily-report` 的日报/周报。
+- `/auto-goo:goo-improve` 的流程摩擦、改进建议和采纳状态。
+- `/auto-goo:goo-benchmark`、`/auto-goo:goo-start`、`/auto-goo:goo-continue` 产生的指标、执行证据、优化经验和最终结论。
+- `/auto-goo:goo-plan` 产生的计划摘要、关键约束和可复用规划经验；完整 `.goo/plan.json` 仍保留为本地状态源。
+
+归档优先写入 `<wiki_dir>/<archive.project_dir>/`，并更新项目入口或 `log.md`。Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback。命令对应的 `.goo/*.json` 产物应包含 `archive` 字段，记录归档路径、fallback 状态和 `log.md` 是否更新。
+
 ## 目录规则
 
 不设独立 `auto-goo/` 目录，按任务所属领域放入对应目录，通过 `auto-goo` tag 区分来源。

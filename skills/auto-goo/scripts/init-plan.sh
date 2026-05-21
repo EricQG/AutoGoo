@@ -13,75 +13,178 @@ fi
 
 TASK="$1"
 COUNT="${2:-1}"
-TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
-PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
-PLAN_FILE="$PROJECT_ROOT/.goo/plan.json"
-PLAN_HISTORY_DIR="$PROJECT_ROOT/.goo/plans/history"
 
-mkdir -p "$PROJECT_ROOT/.goo"
+python3 - "$TASK" "$COUNT" <<'PY'
+from __future__ import annotations
 
-if [ -f "$PLAN_FILE" ]; then
-  mkdir -p "$PLAN_HISTORY_DIR"
-  ARCHIVE_TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
-  ARCHIVE_FILE="$PLAN_HISTORY_DIR/plan-$ARCHIVE_TIMESTAMP.json"
-  ARCHIVE_INDEX=1
-  while [ -e "$ARCHIVE_FILE" ]; do
-    ARCHIVE_FILE="$PLAN_HISTORY_DIR/plan-$ARCHIVE_TIMESTAMP-$ARCHIVE_INDEX.json"
-    ARCHIVE_INDEX=$((ARCHIVE_INDEX + 1))
-  done
-  cp "$PLAN_FILE" "$ARCHIVE_FILE"
-  echo "✓ previous plan archived at $ARCHIVE_FILE"
-fi
+import json
+import shutil
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
-# Build steps JSON. AutoGoo plans always end with a wiki archive step by
-# default, so goo-start/goo-continue can preserve lessons after execution.
-STEPS=""
-for i in $(seq 1 "$COUNT"); do
-  if [ "$i" -eq 1 ]; then
-    DEPS="[]"
-  else
-    DEPS="[$((i-1))]"
-  fi
-  STEP="    { \"id\": $i, \"tier\": 1, \"name\": \"步骤$i\", \"description\": \"步骤$i 描述\", \"depends_on\": $DEPS, \"type\": \"exec\", \"subagent\": \"implementer\" }"
-  if [ -z "$STEPS" ]; then
-    STEPS="$STEP"
-  else
-    STEPS="$STEPS,
-$STEP"
-  fi
-done
 
-ARCHIVE_ID=$((COUNT + 1))
-ARCHIVE_TIER=$((COUNT + 1))
-ARCHIVE_DEPS="[$COUNT]"
-ARCHIVE_STEP="    { \"id\": $ARCHIVE_ID, \"tier\": $ARCHIVE_TIER, \"name\": \"归档到 Goo-wiki\", \"description\": \"将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md 的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback\", \"depends_on\": $ARCHIVE_DEPS, \"type\": \"archive\", \"subagent\": \"recorder\" }"
-STEPS="$STEPS,
-$ARCHIVE_STEP"
+def timestamp() -> str:
+    return datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
-cat > "$PLAN_FILE" << EOF
-{
-  "task": "$TASK",
-  "status": "pending",
-  "created_at": "$TIMESTAMP",
-  "started_at": null,
-  "completed_at": null,
-  "wiki_context": {
-    "found": false,
-    "sources": [],
-    "reused_knowledge": []
-  },
-  "context_digest": {
-    "found": false,
-    "decisions": [],
-    "constraints": [],
-    "acceptance_criteria": [],
-    "open_questions": []
-  },
-  "context_artifacts": [],
-  "steps": [
-$STEPS
-  ]
-}
-EOF
 
-echo "✓ plan.json created at $PLAN_FILE ($COUNT steps + wiki archive)"
+def project_root() -> Path:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        root = result.stdout.strip()
+        if root:
+            return Path(root)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return Path.cwd()
+
+
+def archive_existing_plan(plan_file: Path, history_dir: Path) -> Path | None:
+    if not plan_file.exists():
+        return None
+    history_dir.mkdir(parents=True, exist_ok=True)
+    base = history_dir / f"plan-{timestamp()}.json"
+    archive_file = base
+    index = 1
+    while archive_file.exists():
+        archive_file = history_dir / f"{base.stem}-{index}.json"
+        index += 1
+    shutil.copy2(plan_file, archive_file)
+    return archive_file
+
+
+def make_step(step_id: int) -> dict[str, Any]:
+    output = f".goo/artifacts/step-{step_id}-output.md"
+    return {
+        "id": step_id,
+        "goal_id": "g1",
+        "tier": 1,
+        "name": f"步骤{step_id}",
+        "description": (
+            f"步骤{step_id} 描述。请在执行前把本步骤改写为自包含描述，"
+            "包含输入、边界、输出和验收点。"
+        ),
+        "depends_on": [],
+        "type": "exec",
+        "subagent": "implementer",
+        "status": "pending",
+        "progress": 0,
+        "output": output,
+        "inputs": [],
+        "outputs": [output],
+        "allowed_read_paths": ["."],
+        "allowed_write_paths": [".goo/artifacts/"],
+        "validation": "产物存在且满足本步骤描述中的验收点",
+        "risk_level": "low",
+        "requires_user_confirm": False,
+        "agent_id": None,
+        "heartbeat_at": None,
+        "started_at": None,
+        "completed_at": None,
+    }
+
+
+def main() -> int:
+    task = sys.argv[1]
+    try:
+        count = int(sys.argv[2])
+    except ValueError as exc:
+        raise SystemExit(f"step_count must be an integer: {sys.argv[2]}") from exc
+    if count < 1:
+        raise SystemExit("step_count must be >= 1")
+
+    root = project_root()
+    goo_dir = root / ".goo"
+    plan_file = goo_dir / "plan.json"
+    history_dir = goo_dir / "plans" / "history"
+    goo_dir.mkdir(parents=True, exist_ok=True)
+
+    archived = archive_existing_plan(plan_file, history_dir)
+    if archived:
+        print(f"✓ previous plan archived at {archived}")
+
+    steps = [make_step(i) for i in range(1, count + 1)]
+    archive_id = count + 1
+    archive_output = ".goo/obsidian/<project-slug>/"
+    steps.append(
+        {
+            "id": archive_id,
+            "goal_ids": ["g1"],
+            "tier": 2,
+            "name": "归档到 Goo-wiki",
+            "description": (
+                "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验"
+                "归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md "
+                "的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback"
+            ),
+            "depends_on": [step["id"] for step in steps],
+            "type": "archive",
+            "subagent": "recorder",
+            "status": "pending",
+            "progress": 0,
+            "output": archive_output,
+            "inputs": [step["output"] for step in steps],
+            "outputs": [archive_output],
+            "allowed_read_paths": [".goo/plan.json", ".goo/logs/", ".goo/artifacts/"],
+            "allowed_write_paths": [".goo/obsidian/"],
+            "validation": "归档页或 fallback 笔记存在，并记录产物路径、验证结果和可复用经验",
+            "risk_level": "low",
+            "requires_user_confirm": False,
+            "agent_id": None,
+            "heartbeat_at": None,
+            "started_at": None,
+            "completed_at": None,
+        }
+    )
+
+    plan = {
+        "task": task,
+        "goals": [
+            {
+                "id": "g1",
+                "name": task,
+                "description": "默认目标。若任务包含多个交付目标，goo-plan 应改写为多个 goals 并为步骤绑定 goal_id 或 goal_ids。",
+                "priority": 1,
+                "status": "pending",
+                "acceptance_criteria": [],
+                "outputs": [],
+                "depends_on": [],
+            }
+        ],
+        "status": "pending",
+        "created_at": timestamp(),
+        "started_at": None,
+        "completed_at": None,
+        "max_concurrent": 6,
+        "wiki_context": {
+            "found": False,
+            "sources": [],
+            "reused_knowledge": [],
+        },
+        "context_digest": {
+            "found": False,
+            "decisions": [],
+            "constraints": [],
+            "acceptance_criteria": [],
+            "open_questions": [],
+            "post_plan_updates": [],
+        },
+        "context_artifacts": [],
+        "steps": steps,
+    }
+
+    plan_file.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"✓ plan.json created at {plan_file} ({count} steps + wiki archive)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY

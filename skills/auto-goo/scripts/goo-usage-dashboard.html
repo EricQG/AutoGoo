@@ -118,7 +118,7 @@ function makeBarRow(gridClass, cells) {
     return row;
 }
 
-var currentTab='overview', historyPeriod='7d', interval=30, countdownTimer=0;
+var currentTab='overview', historyPeriod='7d', interval=30, countdownTimer=0, historyAbort=null;
 
 /* ── Overview ──────────────────────────────────────────────── */
 function renderOverview(d) {
@@ -274,16 +274,21 @@ function renderModels(d) {
 }
 
 /* ── History ────────────────────────────────────────────────── */
-function renderHistory(data) {
+function renderHistory(data, period) {
+    var periodLabels={'7d':'7 Days','30d':'30 Days','all':'All Time'};
+    var periodLabel=periodLabels[period||'7d']||'7 Days';
     var root=el('div');
     if(!data||!data.length){
-        root.appendChild(cel('div','empty-state','No records for this period.'));
+        root.appendChild(cel('div','empty-state','No records for '+periodLabel+'.'));
         return root;
     }
 
     var totalTok=data.reduce(function(s,d){return s+(d.tokens||0);},0);
     var totalMsg=data.reduce(function(s,d){return s+(d.messages||d.records||0);},0);
     var totalCost=data.reduce(function(s,d){return s+(d.cost||0);},0);
+
+    var periodHdr=el('div'); periodHdr.style.cssText='font-size:13px;color:var(--accent);margin-bottom:12px';
+    periodHdr.textContent='Period: '+periodLabel; root.appendChild(periodHdr);
 
     var metrics=el('div','metrics');
     [{l:'Total Tokens',v:fmtIntFull(totalTok),c:'green'},{l:'Messages',v:fmtIntFull(totalMsg),c:'cyan'}].forEach(function(m){
@@ -296,14 +301,14 @@ function renderHistory(data) {
     var vals=data.map(function(d){return d.tokens||0;});
     if(vals.length){
         var secS=el('div','section');
-        secS.appendChild(cel('div','section-title','Trend'));
+        secS.appendChild(cel('div','section-title','Trend — '+periodLabel));
         secS.appendChild(cel('div','sparkline',sparkline(vals,55)));
         root.appendChild(secS);
     }
 
     var maxV=Math.max.apply(null,vals)||1;
     var sec=el('div','section');
-    sec.appendChild(cel('div','section-title','Daily Breakdown'));
+    sec.appendChild(cel('div','section-title','Daily Breakdown — '+periodLabel));
 
     data.forEach(function(d){
         var row=el('div','history-grid');
@@ -353,16 +358,20 @@ function loadData() {
 }
 
 function loadHistory() {
-    var url='/api/history?period='+encodeURIComponent(historyPeriod||'7d');
-    fetch(url).then(function(r){
+    if(historyAbort) try{historyAbort.abort();}catch(e){}
+    var controller=new AbortController(); historyAbort=controller;
+    var url='/api/history?period='+encodeURIComponent(historyPeriod||'7d')+'&_='+Date.now();
+    fetch(url,{signal:controller.signal,cache:'no-store'}).then(function(r){
         if(!r.ok) throw new Error('HTTP '+r.status);
         return r.json();
     }).then(function(data){
         var hc=document.getElementById('history-content');
         if(!hc){ console.error('history-content element not found'); return; }
         while(hc.firstChild)hc.removeChild(hc.firstChild);
-        hc.appendChild(renderHistory(data));
-    }).catch(function(e){ console.error('loadHistory error:',e); });
+        hc.appendChild(renderHistory(data,historyPeriod));
+    }).catch(function(e){
+        if(e.name!=='AbortError') console.error('loadHistory error:',e);
+    });
 }
 
 function switchTab(tab) {

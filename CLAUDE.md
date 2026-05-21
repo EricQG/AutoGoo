@@ -1,79 +1,111 @@
-# AutoGoo — 自动化智能体编排框架
+# AutoGoo 项目级智能体规范
 
-## 项目定位
+## 项目目标
 
-AutoGoo 是一个自动化智能体编排框架。接收用户任务后自动解析为执行步骤，按依赖关系并行或串行执行，遇到性能优化场景自动迭代，并自动搜索评价指标用于评测。每一步执行都必须留下结构化记录。
+AutoGoo 是面向 Claude Code / Codex 工作流的自动化智能体编排框架。它的目标不是替用户多写一层流程文档，而是把复杂任务稳定拆成可执行、可恢复、可验证、可归档的工作单元，并让主 Agent、Subagent、Goo-wiki 和 `.goo/plan.json` 形成闭环。
 
-**核心原则**：
-- **先解析，再执行** — 绝不直接动手，先规划成 DAG
-- **能并行就不串行** — 无依赖的步骤必须并行分发
-- **优化必有指标** — 没有量化指标就不算优化
-- **执行必留痕** — 每一步都归档到 `.goo/logs/`
-- **rm 必问许可** — 删除项目目录外的文件/目录前必须先问用户，取得明确确认后才能执行
+AutoGoo 的核心交付包括：
+- 将用户任务解析为带依赖关系的 DAG，而不是临场凭记忆推进。
+- 通过主 Agent 总控和 Subagent 分工，实现可并行的步骤并行执行、有关联的步骤按依赖交接。
+- 用 `.goo/plan.json` 作为当前任务唯一状态源，记录进度、心跳、失败、产物和恢复信息。
+- 在任务开始前召回 Goo-wiki 中的项目经验，在任务完成后归档新的决策、证据、产物路径和复用经验。
+- 对优化类任务建立指标、基线、对比和停止条件，避免无指标的“感觉优化”。
+- 将重复流程脚本化，将长规范放入 `skills/auto-goo/references/`，控制主会话上下文消耗。
 
-## 快速开始 (Quick Start)
+## 总体原则
 
-每次会话加载后，按以下顺序行动：
+- **先召回，再计划**：启动多步任务前先查 Goo-wiki / 项目上下文，复用已有路径、命令、约束、失败经验和指标口径。
+- **先计划，再执行**：多步任务必须先生成或更新 `.goo/plan.json`；单步任务可以直接做，但不能假装已经完成 AutoGoo 流程。
+- **主 Agent 总控，Subagent 执行**：主 Agent 负责目标、拆解、调度、验收和冲突处理；Subagent 只执行被分配的 step，不扩大范围。
+- **能并行就并行**：无依赖的步骤应进入就绪队列并行调度；有依赖的步骤必须通过产物和状态交接。
+- **状态写回 plan**：步骤开始、进度、心跳、完成、失败、重试和恢复判断都必须回写当前 `.goo/plan.json`。
+- **执行必留痕**：关键命令、输入、输出、产物路径、验证结果、失败原因和用户决策都要能在 `.goo/logs/`、plan 或 Goo-wiki 中追溯。
+- **优化必有指标**：性能、效率、质量、准确率、成本等优化任务必须先定义指标和基线，再做改动和对比。
+- **归档不是收尾作文**：Goo-wiki 是启动时的记忆层，也是完成后的知识层；归档要记录可复用结论，而不是复制聊天流水。
+- **内容输出必须归档**：除纯状态查看、纯初始化配置或用户明确要求不归档外，任何产生可复用内容的命令都必须写入 Goo-wiki 或 `.goo/obsidian/` fallback；不得只写 `.goo/*.json` 或只在聊天中展示。适用内容包括 brainstorm 候选目标、usage/token 降本分析、日报/周报、改进建议、benchmark 指标、plan 摘要和执行经验。
+- **脚本优先，文档同步**：可重复操作优先沉淀到脚本；命令、README、SKILL、reference、示例和校验脚本必须保持一致。
 
-```
-1. Goo-wiki vault 检测
-   → SessionStart hook 自动执行（配置见 skills/auto-goo/references/setup.md）
-   → vault 不存在则使用 .goo/obsidian/ fallback
+## 工作边界
 
-2. 检查未完成任务
-   → SessionStart hook 读取 .goo/plan.json（如果存在）
-   → 有未完成步骤则询问用户是否继续
+AutoGoo 应覆盖：
+- 复杂编码、数据处理、调研、评测、优化、迁移、报告和多阶段交付任务。
+- 需要跨会话恢复、并行执行、远程服务器、Goo-wiki 归档或明确验收标准的任务。
+- Markdown 任务包、issue/PR 描述、计划文档、日志片段等结构化输入的解析和执行。
 
-3. 等待用户下达任务
-```
+AutoGoo 不应强行覆盖：
+- 单条命令、简单问答、很小的文本改写、一次性文件查看等无须 DAG 的任务。
+- 用户明确要求只讨论方案、只写文档草稿、只做人工解释而不执行的场景。
+- 没有用户授权的高风险动作，如删除、覆盖配置、远程写入、默认分支发布等。
 
 ## 核心工作流
 
-完整工作流定义在 **goo-workflow skill** 中，快捷命令表也见该文件：
+完整流程定义在 `skills/auto-goo/SKILL.md`。该文件是技能触发、阶段入口、命令模式和关键铁律的主入口；长规则放在 `skills/auto-goo/references/`。
 
+标准阶段：
+1. **初始化**：通过 `/auto-goo:goo-init` 写入用户级或项目级配置，明确 wiki 路径、项目归档根、远程服务器和是否更新项目 `CLAUDE.md`。
+2. **Wiki 召回**：解析配置优先级，检索 Goo-wiki 项目页、概念页、周报和日志，形成 `wiki_context`。
+3. **任务解析**：识别输入形态、交付物、约束、验收标准和依赖关系，写入 `.goo/plan.json`。
+4. **执行调度**：按 DAG、槽位、心跳和依赖状态派发 Subagent，实时更新 plan。
+5. **优化迭代**：对 `type: "optimize"` 的步骤执行指标搜索、基线、瓶颈分析、优化对比和停止判断。
+6. **归档沉淀**：将目标、计划、关键证据、产物、验证结果、决策和复用经验写入 Goo-wiki 或 `.goo/obsidian/` fallback。
+7. **自改进**：任务后记录流程问题；高频问题经用户确认后更新对应规范、脚本或 allowlist。
+
+内容输出类命令即使不进入完整执行 DAG，也必须完成归档沉淀。`goo-brainstorm`、`usage-analyse`、`goo-daily-report`、`goo-improve`、`goo-benchmark`、`goo-plan` 等只要产出可复用判断、候选目标、报告、指标、规则或经验，就要写入 Goo-wiki 项目路径并更新项目入口或 `log.md`；Goo-wiki 不可用时写入 `.goo/obsidian/<project-slug>/` fallback，并在对应 `.goo/*.json` 产物记录 `archive` 字段。
+
+## 状态与产物规范
+
+- 当前任务唯一状态源是 `.goo/plan.json`。不得用历史 plan、聊天记忆或临时笔记替代当前 plan。
+- 覆盖 `.goo/plan.json` 前必须把旧 plan 归档到 `.goo/plans/history/plan-<timestamp>.json`。
+- 每个 step 至少要写清 `id`、`name`、`description`、`depends_on`、`type`、`subagent`、`status`，执行中维护 `progress`、`heartbeat_at`、`started_at`、`completed_at`、`agent_id`。
+- step 描述必须包含输入、边界、输出和验收点，确保执行者不依赖主会话隐含上下文。
+- 长对话方案、取舍原因、用户偏好和验收标准必须固化到 `context_digest` 或 `context_artifacts`。
+- 产物默认放在 `.goo/artifacts/`、任务指定输出路径或 plan 明确记录的位置；日志默认放在 `.goo/logs/`。
+- `/auto-goo:goo-status` 应读取 plan 渲染状态，不凭感觉汇报进度。
+
+## Subagent 规范
+
+- 合法角色包括 `research`、`implementer`、`optimizer`、`evaluator`、`reviewer`、`recorder`。
+- 派发给 Subagent 的上下文只包含当前 step、必要项目约束、相关 wiki 摘要、上游产物路径、允许读写边界和回写要求。
+- Subagent 不接收完整聊天记录，不自行修改全局目标，不替主 Agent 做范围扩张决策。
+- Subagent 完成后必须返回产物路径、验证结果、失败原因或待决问题；主 Agent 负责集成和最终验收。
+- 如果 step 缺少必要上下文、允许路径或合法角色，先补 plan 或 context artifact，再派发。
+
+## 安全约束
+
+- 删除任何文件或目录前必须先征得用户明确同意，包括临时文件、缓存、`.goo/` 产物、远程目录和看似可再生成的内容。
+- 不运行 `git reset --hard`、`git checkout -- <path>`、`git clean`、强推、删除分支、改写历史等破坏性 Git 命令，除非用户明确要求该具体操作。
+- 不回退、不覆盖与当前任务无关的脏改动；相关文件出现预期外变化时，先重新判断上下文。
+- 覆盖配置、批量重生成、移动覆盖、替换用户手写内容、修改 `.claude/settings*.json`、`.goo/config.json` 或项目 `CLAUDE.md` 前，必须说明影响并取得确认或明确参数。
+- 敏感信息只读不显。不得输出、复制、记录 token、password、API key、SSH private key、`secrets.json` 明文内容。
+- 远程服务器、网络下载、依赖安装、后台服务、端口监听、批量数据改写、跨机器同步等操作必须写清作用域、路径和产物；涉及外部写入或不可逆成本时先确认。
+- 发布到默认分支前必须单独确认发布范围；推送前检查本地领先提交，避免把无关提交一起发布。
+
+## 文档与代码同步要求
+
+AutoGoo 的行为不能只改一处。涉及命令、计划 schema、配置、归档、状态、usage、远程服务器或 Subagent 契约时，按影响同步检查：
+- `README.md`
+- `commands/*.md`
+- `skills/auto-goo/SKILL.md`
+- `skills/auto-goo/references/*.md`
+- `skills/auto-goo/templates/*.json`
+- `skills/auto-goo/examples/*.md`
+- `skills/auto-goo/scripts/*`
+- `skills/auto-goo/scripts/check-plugin.sh`
+- `.claude-plugin/marketplace.json` 或插件注册信息
+
+改动后优先运行结构校验脚本：
+
+```bash
+bash /home/zixigu/workspace/AutoGoo/skills/auto-goo/scripts/check-plugin.sh
 ```
-skills/auto-goo/SKILL.md
-```
 
-各阶段详细规范：
-- **环境设置** — `skills/auto-goo/references/setup.md`
-- **任务解析** — `skills/auto-goo/references/task-parsing.md`
-- **执行引擎** — `skills/auto-goo/references/execution-engine.md`
-- **优化循环** — `skills/auto-goo/references/optimization-loop.md`
-- **Obsidian 归档** — `skills/auto-goo/references/obsidian-archive.md`
-- **Python 规范** — `skills/auto-goo/references/python-standards.md`
+## 参考入口
 
-## 流程自省与持续改进
-
-AutoGoo 插件自身应当根据实际使用持续迭代。每次执行都是收集改进信号的素材。
-
-### 触发方式
-
-| 时机 | 方式 | 动作 |
-|------|------|------|
-| 每次任务后 | 自动记录 | 在日志末尾追加 `## 流程问题` 反思 |
-| 每 5 个任务 | `/auto-goo:goo-improve` 流程 | 汇总高频问题，生成修改方案 |
-| 用户主动 | `/auto-goo:goo-improve` 或 `优化AutoGoo` | 立即启动改进分析 |
-
-### 问题记录格式
-
-在 `.goo/logs/` 的任务日志末尾追加结构化反思：
-
-```yaml
-## 流程问题
-- 问题: "<具体问题>"
-  根因: "<根因分析>"
-  改进: "<建议修改的文件和内容>"
-  优先级: high | medium | low
-```
-
-### 修改决策
-
-| 信号 | 改什么 |
-|------|--------|
-| 命令弹窗频繁 | `settings.local.json` allowlist |
-| 解析遗漏 | `references/task-parsing.md` |
-| 流程指引不足 | `references/execution-engine.md` |
-| 技能触发不准 | `SKILL.md` description |
-
-完整自改进规范 → `skills/auto-goo/references/self-improvement.md`
+- `skills/auto-goo/SKILL.md`：完整工作流、命令模式和关键执行铁律。
+- `skills/auto-goo/references/setup.md`：配置、Goo-wiki 路径和 SessionStart hook 建议。
+- `skills/auto-goo/references/task-parsing.md`：Markdown 输入解析、DAG、plan schema 和拆分规则。
+- `skills/auto-goo/references/execution-engine.md`：调度、Subagent prompt、日志、错误处理和心跳。
+- `skills/auto-goo/references/optimization-loop.md`：指标、基线、评测和优化停止条件。
+- `skills/auto-goo/references/obsidian-archive.md`：Goo-wiki 归档、wikilink、项目 index/log 维护。
+- `skills/auto-goo/references/self-improvement.md`：流程问题采集、自改进触发和修改决策。
+- `skills/auto-goo/references/python-standards.md`：Python 实现规范。

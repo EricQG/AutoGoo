@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" role="img" aria-labelledby="title desc">
+  <title id="title">AutoGoo DAG with multiple goals</title>
+  <desc id="desc">Diagram showing goals, DAG steps, dependencies, and goal bindings in an AutoGoo plan.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 8; }
+      .goal { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; rx: 8; }
+      .step { fill: #f8fafc; stroke: #475569; stroke-width: 2; rx: 8; }
+      .archive { fill: #ecfdf5; stroke: #059669; stroke-width: 2; rx: 8; }
+      .shared { fill: #fef9c3; stroke: #ca8a04; stroke-width: 2; rx: 8; }
+      .text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #0f172a; }
+      .muted { fill: #475569; font-size: 18px; }
+      .title { font-size: 32px; font-weight: 700; }
+      .label { font-size: 21px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 15px; fill: #475569; }
+      .edge { stroke: #334155; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .bind { stroke: #0284c7; stroke-width: 2; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrow); }
+      .archive-edge { stroke: #059669; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1180" height="760"/>
+
+  <text class="text title" x="60" y="64">AutoGoo plan.json: goals + steps DAG</text>
+  <text class="text muted" x="60" y="98">goals[] 定义交付目标；steps[] 定义执行节点；depends_on 定义边；goal_id / goal_ids 绑定目标。</text>
+
+  <rect class="panel" x="50" y="135" width="1080" height="560"/>
+  <text class="text label" x="82" y="180">goals[]</text>
+  <text class="text label" x="390" y="180">steps[] DAG</text>
+
+  <rect class="goal" x="80" y="215" width="230" height="105"/>
+  <text class="text label" x="104" y="252">g1: 修复功能</text>
+  <text class="text body" x="104" y="282">验收: 测试通过</text>
+  <text class="text small" x="104" y="306">outputs: patch + tests</text>
+
+  <rect class="goal" x="80" y="390" width="230" height="105"/>
+  <text class="text label" x="104" y="427">g2: 更新文档</text>
+  <text class="text body" x="104" y="457">验收: README 同步</text>
+  <text class="text small" x="104" y="481">outputs: docs update</text>
+
+  <rect class="shared" x="405" y="245" width="210" height="100"/>
+  <text class="text label" x="430" y="283">Step 1</text>
+  <text class="text body" x="430" y="313">分析现状</text>
+  <text class="text small" x="430" y="335">goal_ids: [g1, g2]</text>
+
+  <rect class="step" x="705" y="190" width="210" height="100"/>
+  <text class="text label" x="730" y="228">Step 2</text>
+  <text class="text body" x="730" y="258">修复代码</text>
+  <text class="text small" x="730" y="280">goal_id: g1</text>
+
+  <rect class="step" x="705" y="365" width="210" height="100"/>
+  <text class="text label" x="730" y="403">Step 3</text>
+  <text class="text body" x="730" y="433">更新文档</text>
+  <text class="text small" x="730" y="455">goal_id: g2</text>
+
+  <rect class="archive" x="975" y="278" width="120" height="100"/>
+  <text class="text label" x="995" y="316">Step 4</text>
+  <text class="text body" x="995" y="346">归档</text>
+  <text class="text small" x="995" y="368">[g1,g2]</text>
+
+  <path class="edge" d="M615 285 C650 270, 670 250, 705 240"/>
+  <path class="edge" d="M615 315 C650 340, 670 390, 705 415"/>
+  <path class="archive-edge" d="M915 240 C940 250, 955 280, 975 310"/>
+  <path class="archive-edge" d="M915 415 C940 400, 955 365, 975 345"/>
+
+  <path class="bind" d="M310 268 C345 268, 365 278, 405 290"/>
+  <path class="bind" d="M310 443 C345 420, 365 330, 405 305"/>
+  <path class="bind" d="M310 268 C500 150, 625 190, 705 225"/>
+  <path class="bind" d="M310 443 C500 505, 625 460, 705 430"/>
+
+  <rect class="panel" x="80" y="555" width="1015" height="105"/>
+  <text class="text label" x="110" y="592">调度规则</text>
+  <text class="text body" x="110" y="624">1. 找 status=pending 且 depends_on 全 completed 的 step。</text>
+  <text class="text body" x="535" y="624">2. 无依赖冲突的 step 可并行派发。</text>
+  <text class="text body" x="110" y="650">3. goal_id / goal_ids 只说明 step 服务哪个目标，不替代 depends_on。</text>
+</svg>

@@ -629,6 +629,7 @@ if wiki_ready:
 - 使用 `/auto-goo:goo-start` 或 `/auto-goo:goo-continue` 执行时，所有 `research` / `exec` / `optimize` / `eval` / `review` / `archive` step 必须派发给 `.goo/plan.json` 中声明的 `subagent`；主 Agent 只负责编排、状态修复、上下文补全和产物审核，不直接代写步骤产物或代跑步骤命令。
 - 如果待执行 step 缺少 `subagent`、`depends_on`、`output`、读写边界或必要上下文，先更新 `.goo/plan.json` / `context_artifacts` 后再派发，不用主会话聊天记录临时补齐。
 - 使用 `/auto-goo:goo-start` 或 `/auto-goo:goo-continue` 执行后，必须归档任务目标、计划摘要、步骤证据、产物路径、验证结果、关键决策、问题处理和可复用经验。
+- 任何产生可复用内容的命令都必须归档到 Goo-wiki 或 `.goo/obsidian/` fallback；不得只写 `.goo/*.json` 或只在聊天中展示。适用内容包括 brainstorm 候选目标、usage/token 降本分析、日报/周报、改进建议、benchmark 指标、plan 摘要和执行经验。
 - 用户要求日报、周报、总结今天或调用 `/auto-goo:goo-daily-report` 时，必须把 Claude Code / Codex 会话沉淀到 Goo-wiki `journal/daily/`，并更新 `log.md`；同日日报已存在时只追加新增内容，不整体覆盖已有人工整理。
 - Goo-wiki 可用时优先写入 `{wiki_dir}/{project_archive_dir}/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_project_dir}` 作为本地 fallback。
 - 不把归档当作事后报告；归档内容要能支撑下一次任务的召回、规划和复用。

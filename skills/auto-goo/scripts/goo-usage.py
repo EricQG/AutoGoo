@@ -1093,7 +1093,9 @@ class _UsageHandler:
 
         if route == "/api/history":
             qs = parse_qs(parsed.query)
-            period = qs.get("period", ["7d"])[0]
+            period = qs.get("period", ["7d"])[0].strip()
+            if period not in ("7d", "30d", "all"):
+                period = "7d"
             try:
                 data = api_history(self.args, self.pricing, self.tz, period)
                 body = json.dumps(data, default=_json_safe)
@@ -1115,6 +1117,8 @@ def _make_server(args, pricing, tz):
             self.send_response(code)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(body.encode("utf-8"))))
+            if mime == "application/json":
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
             self.end_headers()
             self.wfile.write(body.encode("utf-8"))
 

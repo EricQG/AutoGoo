@@ -36,17 +36,19 @@ fi
 echo ""
 echo "── 2. SKILL 定义 ──"
 
-SKILL="$ROOT/skills/auto-goo/SKILL.md"
-if [[ -f "$SKILL" ]]; then
-  pass "SKILL.md 存在"
-  if head -1 "$SKILL" | grep -q '^---$'; then
-    pass "  YAML frontmatter 起始正确"
-  else
-    fail "  YAML frontmatter 起始缺失"
-  fi
-  if command -v python3 &>/dev/null; then
-    set +e
-    python3 - "$SKILL" <<'PY'
+SKILLS=("auto-goo")
+for skill_dir in "${SKILLS[@]}"; do
+  SKILL="$ROOT/skills/$skill_dir/SKILL.md"
+  if [[ -f "$SKILL" ]]; then
+    pass "skills/$skill_dir/SKILL.md 存在"
+    if head -1 "$SKILL" | grep -q '^---$'; then
+      pass "  YAML frontmatter 起始正确"
+    else
+      fail "  YAML frontmatter 起始缺失"
+    fi
+    if command -v python3 &>/dev/null; then
+      set +e
+      python3 - "$SKILL" <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -70,19 +72,20 @@ if missing:
 if len(fields["description"]) > 1024:
     raise SystemExit(3)
 PY
-    rc=$?
-    set -e
-    case "$rc" in
-      0) pass "  frontmatter name/description 格式正确" ;;
-      1) fail "  frontmatter 解析失败" ;;
-      2) fail "  frontmatter 缺少 name 或 description" ;;
-      3) fail "  description 超过 1024 字符，会浪费启动上下文" ;;
-      *) fail "  frontmatter 校验异常" ;;
-    esac
+      rc=$?
+      set -e
+      case "$rc" in
+        0) pass "  frontmatter name/description 格式正确" ;;
+        1) fail "  frontmatter 解析失败" ;;
+        2) fail "  frontmatter 缺少 name 或 description" ;;
+        3) fail "  description 超过 1024 字符，会浪费启动上下文" ;;
+        *) fail "  frontmatter 校验异常" ;;
+      esac
+    fi
+  else
+    fail "skills/$skill_dir/SKILL.md 缺失"
   fi
-else
-  fail "SKILL.md 缺失"
-fi
+done
 
 # ── 3. Reference 文件 ──
 echo ""
@@ -112,7 +115,7 @@ done
 echo ""
 echo "── 4. 命令文件 ──"
 
-CMDS=("goo-init" "goo-plan" "goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status" "goo-daily-report" "goo-usage")
+CMDS=("goo-init" "goo-brainstorm" "goo-plan" "goo-start" "goo-benchmark" "goo-continue" "goo-improve" "goo-status" "goo-daily-report" "goo-usage" "usage-analyse")
 for cmd in "${CMDS[@]}"; do
   f="$ROOT/commands/$cmd.md"
   if [[ -f "$f" ]]; then

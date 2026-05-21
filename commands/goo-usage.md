@@ -31,10 +31,11 @@ sleep 1
 ### 选项 2: 内联 TUI
 
 ```bash
-python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --interval 30
+python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --once
 ```
 
 先让用户 approve 此命令。
+`--once` 打印一次快照后退出，避免在 Claude Code 终端内启动交互式 TUI 导致的终端冲突。
 
 ## 仪表盘
 

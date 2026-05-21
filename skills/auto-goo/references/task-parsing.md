@@ -5,15 +5,95 @@
 0. **Wiki 经验召回** — 检索 Goo-wiki 中相关项目页、概念页、问题页、周报、历史任务页和 `log.md`，提取可复用经验与可链接页面
 1. **识别输入形态** — 普通一句话、Markdown 任务包、已有 plan、issue/PR 描述、日志片段等要区别处理
 2. **解析结构化任务** — 如果输入是 Markdown，先提取标题层级、任务清单、代码块、表格、约束、验收标准、文件路径和命令，再判断真实任务
-3. **识别最终交付物** — "用户最终要拿到什么？脚本、模型、报告还是系统？"
-4. **上下文约束合并** — 将 wiki 里的历史决策、已验证命令、路径、指标口径、失败经验写入规划依据
-5. **对话方案固化** — 将当前对话中已确认的方案、取舍、用户偏好、约束、验收标准和未决问题写入 `context_digest`；长文本优先写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/` 并在 `context_artifacts` 引用，Goo-wiki 不可用时降级到 `.goo/obsidian/<project-slug>/context/`
-6. **逆向拆解** — 从目标倒推："要交付这个，需要先有什么？" 持续追问直到拆成原子步骤
-7. **标注依赖关系** — 步骤 A 必须在 B 之前完成 → A `depends_on` B
-8. **识别优化标记** — 包含"性能/速度/延迟/吞吐/效率/内存/GPU/耗时" → `type: "optimize"`
-9. **范围约束** — 每个步骤目标严格取自任务描述，不添加未要求的功能
-10. **归档历史 plan** — 如果 `.goo/plan.json` 已存在，先复制到 `.goo/plans/history/plan-<timestamp>.json`
-11. **输出 plan.json**
+3. **确认目标已明确** — 判断输入是否已有明确 goal，或是否引用了 `.goo/brainstorm.json` 中的候选 goal；如果用户还不知道要做什么、要求 brainstorm、探索方向或基于 wiki 找下一步，停止 plan 流程并切换到 `/auto-goo:goo-brainstorm`
+4. **识别交付目标** — 抽取一个或多个 `goals[]`，每个 goal 都要有交付物、验收标准和优先级
+5. **判断 goal 关系** — 独立 goal 优先拆成多个 plan；共享前置步骤则保留一个 DAG 并分支；强依赖 goal 按依赖链串联；冲突或优先级不清时先问用户
+6. **上下文约束合并** — 将 wiki 里的历史决策、已验证命令、路径、指标口径、失败经验写入规划依据
+7. **对话方案固化** — 将当前对话中已确认的方案、取舍、用户偏好、约束、验收标准和未决问题写入 `context_digest`；长文本优先写入 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/` 并在 `context_artifacts` 引用，Goo-wiki 不可用时降级到 `.goo/obsidian/<project-slug>/context/`
+8. **逆向拆解** — 从每个 goal 倒推："要交付这个，需要先有什么？" 持续追问直到拆成原子步骤
+9. **标注依赖关系** — 步骤 A 必须在 B 之前完成 → B `depends_on` A；每个非归档 step 必须绑定 `goal_id` 或 `goal_ids`
+10. **识别优化标记** — 包含"性能/速度/延迟/吞吐/效率/内存/GPU/耗时" → `type: "optimize"`
+11. **范围约束** — 每个步骤目标严格取自任务描述，不添加未要求的功能
+12. **归档历史 plan** — 如果 `.goo/plan.json` 已存在，先复制到 `.goo/plans/history/plan-<timestamp>.json`
+13. **输出 plan.json**
+
+## 多 Goal 任务
+
+当用户任务包含多个明确交付目标时，不要把它压成一条含糊的线性 plan。先抽取 `goals[]`，再决定是拆成多个 plan，还是保留一个带分支的 DAG。如果目标还不明确，先走 `/auto-goo:goo-brainstorm`。
+
+### Goal 识别
+
+以下信号通常代表多个 goal：
+
+- 用户用"同时"、"以及"、"另外"、"顺便"连接多个交付物。
+- Markdown 中出现多个顶层 TODO、多个验收小节或多个互不依赖的模块。
+- 目标产物不同，例如"修复脚本"、"生成报告"、"更新 README"。
+- 目标受众不同，例如"给训练流程用的 JSON"和"给用户看的说明文档"。
+
+每个 goal 至少包含：
+
+- `id`：稳定 ID，如 `g1`、`g2`。
+- `name`：一句话目标名。
+- `description`：该 goal 具体交付什么。
+- `priority`：默认按用户原文顺序从 1 递增；用户明确优先级时按用户要求。
+- `acceptance_criteria`：该 goal 的验收标准。
+- `outputs`：该 goal 的最终产物。
+- `depends_on`：依赖的其他 goal ID；没有依赖则为空数组。
+
+### Goal 关系决策
+
+| 关系 | 处理 |
+|------|------|
+| 完全独立 | 默认拆成多个小 plan；如果用户要求一次性规划，可保留一个 plan 但每个分支必须标 `goal_id` |
+| 共享前置步骤 | 保留一个 plan：共享步骤使用 `goal_ids` 绑定多个 goal，下游按 goal 分支 |
+| 强依赖 | 保留一个 plan 或顺序小 plan；后一个 goal 的首步依赖前一个 goal 的交付/验收步骤 |
+| 目标冲突 | 先问用户取舍或优先级，不要自行合并 |
+| 范围过大 | 生成总览 plan，并把当前可执行 goal 或前 1-2 层切成小 plan |
+
+### Step 绑定规则
+
+- 单目标 step 使用 `goal_id: "g1"`。
+- 共享准备、统一验证或统一归档 step 使用 `goal_ids: ["g1", "g2"]`。
+- 非归档 step 不应缺少 goal 绑定；如果缺少，执行前先补 plan。
+- `description` 中要写清该 step 服务哪个 goal，以及它的输出如何支撑该 goal 的验收。
+- 最后的 `归档到 Goo-wiki` step 应按 goal 汇总完成状态、产物路径、验证结果、延期/拆分原因和可复用经验。
+
+## Brainstorm 到 Plan
+
+`goo-plan` 只处理目标已明确的输入，但目标可以来自用户直接描述，也可以来自 `.goo/brainstorm.json` 中已被用户选中的候选 goal。
+
+### 目标明确性判断
+
+直接进入 plan 的最低条件：
+
+- 有明确交付物：代码、文档、报告、数据、模型、配置、评测结果或归档内容。
+- 有范围边界：文件、模块、项目、数据路径、wiki 页面、命令或问题域。
+- 有验收方式：用户给出验收标准，或可以自然推导出测试、检查、文件存在性、指标阈值、人工确认点。
+- 能拆出至少一个可执行 step。
+
+不满足这些条件时，不要把模糊方向硬转成 plan；应先运行 `/auto-goo:goo-brainstorm`。
+
+### 使用 `.goo/brainstorm.json`
+
+当用户说"用 cg1 做 plan"、"把 cg1 和 cg3 合并规划"、"按 brainstorm 推荐目标执行"时：
+
+1. 读取当前项目 `.goo/brainstorm.json`。
+2. 校验用户选择的 candidate goal ID 存在。
+3. 将每个选中 candidate goal 转成正式 `goals[]`：
+   - `name` ← candidate `name`
+   - `description` ← candidate `why` + `expected_output`
+   - `acceptance_criteria` ← candidate `acceptance_criteria`
+   - `outputs` ← candidate `expected_output`
+4. 将 candidate `prerequisites` 和 `readiness_checklist` 进入执行 plan：
+   - 对必须先确认的条件，生成前置检查 step。
+   - 对高风险或需要用户判断的条件，设置 `requires_user_confirm=true`。
+   - 对可自动检查的条件，写入 step `validation`。
+5. 将 candidate `evidence` 合并到 `wiki_context.sources` 或 `context_artifacts`。
+6. 基于正式 `goals[]` 继续生成 DAG。
+
+### 不自动猜测
+
+如果 `.goo/brainstorm.json` 存在，但用户没有明确选择 candidate goal，`goo-plan` 不能默认选推荐项直接执行。可以展示 `recommended_goal_ids`，但必须等待用户确认。
 
 ## Markdown 任务输入
 
@@ -65,6 +145,9 @@
 ## 任务分析
 
 最终交付物：<一句话描述>
+Goals：
+- g1: <目标名> — <交付物/验收标准>
+- g2: <可选，第二目标>
 
 输入形态：
 - 类型：<一句话/Markdown任务包/已有plan/issue/日志/其他>
@@ -84,6 +167,7 @@ Wiki 经验召回：
 
 倒推步骤链：
 1. <步骤名> — <做什么>
+   - goal: <g1 或 [g1,g2]>
    - 依赖：<前置步骤>
    - 可并行：<true/false>
    - 类型：<exec/optimize>
@@ -100,6 +184,22 @@ DAG 结构总结：
 ```json
 {
   "task": "<任务描述>",
+  "goals": [
+    {
+      "id": "g1",
+      "name": "<目标名>",
+      "description": "<该目标要交付什么>",
+      "priority": 1,
+      "status": "pending",
+      "acceptance_criteria": [
+        "<该目标的验收标准>"
+      ],
+      "outputs": [
+        "<该目标的最终产物>"
+      ],
+      "depends_on": []
+    }
+  ],
   "status": "pending",
   "created_at": "YYYY-MM-DDTHH-MM-SS",
   "started_at": null,
@@ -146,6 +246,7 @@ DAG 结构总结：
   "steps": [
     {
       "id": 1,
+      "goal_id": "g1",
       "tier": 1,
       "name": "<步骤名>",
       "description": "<做什么>",
@@ -155,6 +256,13 @@ DAG 结构总结：
       "status": "pending",
       "progress": 0,
       "output": "<产物路径>",
+      "inputs": ["<输入文件/上游产物/上下文 artifact>"],
+      "outputs": ["<产物路径>"],
+      "allowed_read_paths": ["<允许读取的路径>"],
+      "allowed_write_paths": ["<允许写入的路径>"],
+      "validation": "<验收方式：命令、文件存在性、人工检查点或指标阈值>",
+      "risk_level": "low",
+      "requires_user_confirm": false,
       "agent_id": null,
       "heartbeat_at": null,
       "started_at": null,
@@ -162,6 +270,7 @@ DAG 结构总结：
     },
     {
       "id": 2,
+      "goal_ids": ["g1"],
       "tier": 2,
       "name": "归档到 Goo-wiki",
       "description": "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md 的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback",
@@ -171,6 +280,13 @@ DAG 结构总结：
       "status": "pending",
       "progress": 0,
       "output": "Goo-wiki/wiki/projects/<project-slug>/ 或 .goo/obsidian/<project-slug>/",
+      "inputs": [".goo/plan.json", ".goo/logs/", "<上游产物路径>"],
+      "outputs": ["Goo-wiki/wiki/projects/<project-slug>/ 或 .goo/obsidian/<project-slug>/"],
+      "allowed_read_paths": [".goo/plan.json", ".goo/logs/", ".goo/artifacts/"],
+      "allowed_write_paths": ["Goo-wiki/wiki/projects/<project-slug>/ 或 .goo/obsidian/<project-slug>/"],
+      "validation": "归档页或 fallback 笔记存在，并记录产物路径、验证结果和可复用经验",
+      "risk_level": "low",
+      "requires_user_confirm": false,
       "agent_id": null,
       "heartbeat_at": null,
       "started_at": null,
@@ -200,11 +316,14 @@ DAG 结构总结：
 - 覆盖 `.goo/plan.json` 前，先把旧 plan 原样复制到 `.goo/plans/history/`
 - 写入 `.goo/plan.json`
 - 填充 `wiki_context`
+- 填充 `goals[]`；单目标任务也写一个默认 goal，多目标任务必须为每个交付目标写清验收标准和产物
 - 每个步骤包含 `output`，便于后续恢复和验收
+- 每个非归档步骤必须包含 `goal_id` 或 `goal_ids`；共享步骤用 `goal_ids`
+- 每个步骤应包含 `inputs`、`outputs`、`allowed_read_paths`、`allowed_write_paths`、`validation`、`risk_level` 和 `requires_user_confirm`，让 Subagent 能明确知道输入、输出、读写范围、验收方式和是否需要用户确认
 - 每个步骤必须包含合法 `subagent`，明确执行角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`。缺失或不合法时执行阶段先补 plan 或创建新角色，不由主 Agent 代执行
 - 最后一步包含默认 Wiki 归档任务，依赖所有非归档叶子步骤
 - 展示简洁计划摘要、并行组、关键风险、需要用户确认的点
-- 不修改业务文件，不运行实现命令，不启动优化循环
+- 不修改业务文件，不运行实现命令，不启动优化循环；允许写入 `.goo/plan.json` 和必要的 `context_artifacts`
 
 用户确认后，可用 `/auto-goo:goo-start <任务>` 执行完整流程，或从已有 `.goo/plan.json` 继续。
 
@@ -235,11 +354,16 @@ DAG 结构总结：
 | `started_at` | plan 开始执行时间，首个步骤派发时设置 |
 | `completed_at` | plan 完成时间，所有步骤完成或标记失败时设置 |
 | `max_concurrent` | 最大并发槽位数，默认 6 |
+| `goals` | 交付目标列表。单目标任务也写一个默认 goal；多目标任务按 goal 拆验收标准、最终产物和依赖关系 |
+| `goals[].id` | goal 稳定 ID，如 `g1` |
+| `goals[].status` | goal 状态：`pending` / `running` / `completed` / `failed` / `deferred` |
+| `goals[].depends_on` | goal 之间的依赖关系；仅在一个 goal 必须等待另一个 goal 验收后才填写 |
 | `wiki_context` | Goo-wiki 经验召回结果。没有找到相关知识时也要写 `{"found": false, "sources": [], "reused_knowledge": []}` |
 | `context_digest` | 当前对话中已确认方案的持久摘要。没有额外对话信息时也要写 `{"found": false, "decisions": [], "constraints": [], "acceptance_criteria": [], "open_questions": [], "post_plan_updates": []}` |
 | `context_digest.post_plan_updates` | plan 生成后、执行前通过对话产生的增量方案/约束/验收标准。`goo-start` / `goo-continue` 默认同步到这里；长内容用 `artifact` 指向 `context_artifacts` 中的 Markdown |
 | `context_artifacts` | 可选。大段方案、会议纪要、prompt 草案或任务 Markdown 的路径列表，优先位于 Goo-wiki 项目路径 `wiki/projects/<project-slug>/context/`；Goo-wiki 不可用时位于 `.goo/obsidian/<project-slug>/context/` |
 | `id` | 全局唯一数字 ID |
+| `goal_id` / `goal_ids` | 本步骤服务的目标。单目标 step 用 `goal_id`；共享步骤、统一验证、统一归档用 `goal_ids` |
 | `tier` | 执行轮次，同一轮内无依赖的步骤可并行 |
 | `name` | 简短动词短语 |
 | `description` | 做什么，含完整上下文。必须能脱离聊天记录执行，不使用"按上面方案/参考前文"等隐含引用。需要外部包时末尾标注 `[dep: <包名>]` |
@@ -247,6 +371,13 @@ DAG 结构总结：
 | `type` | `exec` / `optimize` / `eval` / `archive` |
 | `subagent` | 执行该步骤的 Subagent 角色：`research` / `implementer` / `optimizer` / `evaluator` / `reviewer` / `recorder`。缺失或不合法时先补 plan 或创建新角色，不由主 Agent 降级代执行 |
 | `output` | 预期产物文件路径，用于恢复时检测是否已完成 |
+| `inputs` | 本步骤明确依赖的输入文件、上游产物、wiki/context artifact 或外部资料 |
+| `outputs` | 本步骤会产生或更新的产物列表；通常包含 `output`，复杂步骤可列多个 |
+| `allowed_read_paths` | Subagent 允许读取的路径边界；缺失时执行前先补 plan |
+| `allowed_write_paths` | Subagent 允许写入的路径边界；缺失时执行前先补 plan |
+| `validation` | 本步骤完成后的验收方式，可以是命令、文件存在性、人工检查点或指标阈值 |
+| `risk_level` | 风险等级，建议 `low` / `medium` / `high`；涉及覆盖、远程、批量改写、发布等通常不应为 low |
+| `requires_user_confirm` | 是否需要用户确认后才能执行；高风险或不可逆步骤必须为 `true` |
 | `status` | `pending` → `running` → `completed` / `failed`。主会话派发/检测到完成时更新 |
 | `progress` | 0-100 整数，agent 每次心跳时更新。pending 为 0，completed 为 100 |
 | `agent_id` | 执行该步骤的 Agent ID，派发时填写，完成后保留用于审计 |
@@ -301,14 +432,14 @@ pending ──→ running ──→ completed
 
 ## Plan 拆分决策
 
-核心原则：**预估单会话跑不完就拆**。大 plan 提供全局 DAG 视图，但执行层面小 plan 更可靠。
+核心原则：**结构复杂、依赖过深或中间需要判断就拆**。大 plan 提供全局 DAG 视图，但执行层面小 plan 更可靠。
 
 ### 大 plan vs 小 plan
 
 | | 大 plan | 小 plan |
 |---|---------|---------|
 | 步数 | 6-20 步 | 2-4 步 |
-| 会话 | 预期跨多个会话，需 `/auto-goo:goo-continue` 恢复 | 一次会话内跑完，无需恢复 |
+| 恢复 | 需要 `/auto-goo:goo-continue`、心跳和产物检测兜底 | 当前轮完成并验收，通常无需恢复 |
 | 产物传递 | 通过 plan.json + 产物文件路径 | 通过产物文件路径（或内存） |
 | 适用场景 | 目标清晰、依赖关系已完全推演、可以一次性画出完整 DAG | 探索性任务、下一步依赖上一步结果才能决定方向 |
 
@@ -316,8 +447,8 @@ pending ──→ running ──→ completed
 
 以下任一条件满足，就应该拆成多个小 plan：
 
-1. **预估总耗时 > 30 分钟** — 超过单会话安全窗口，大概率中断
-2. **步骤数 > 8** — DAG 拓扑超过 3 层，后半段 agent 可能还没轮到会话就结束了
+1. **步骤数 > 8** — plan 已经超过适合一次调度的规模
+2. **DAG 层数 > 3** — 后半段步骤距离当前可执行层太远，恢复和验收成本上升
 3. **中间产物是人工判断点** — 比如"先跑个基线看看效果再决定怎么优化"，不要预判结果往下串
 4. **后半段步骤依赖前半段产物质量** — 如果 Tier 1 产物可能不合格，Tier 2-3 就是浪费
 
@@ -341,8 +472,8 @@ pending ──→ running ──→ completed
 
 ### 何时不拆（用大 plan）
 
-- 任务规模 <= 5 步，30 分钟内能跑完
-- 依赖链很长但每步都很短（< 2min），总时长可控
+- 任务规模 <= 5 步，且 DAG 层数 <= 3
+- 依赖链虽然较长，但每步都有明确产物、自动验收方式和低风险读写边界
 - 用户明确要求"一次性全自动执行，不要中断问我"
 
 ### 大 plan 的安全网
