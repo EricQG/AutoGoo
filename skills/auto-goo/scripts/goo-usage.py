@@ -269,7 +269,11 @@ def hbar(value: int, maximum: int, width: int = 20, color_fn=None) -> str:
 # ── Argument Parsing ─────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Claude Code usage monitor — rich terminal dashboard")
+    p = argparse.ArgumentParser(
+        description="Claude Code usage monitor — rich terminal dashboard",
+        epilog="Example: cd <AutoGoo> && python3 skills/auto-goo/scripts/goo-usage.py --once",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p.add_argument("-i", "--input-dir", type=Path,
                    default=Path.home() / ".claude" / "projects",
                    help="Claude Code projects log directory")

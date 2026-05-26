@@ -11,13 +11,18 @@ description: 显示 Claude Code token 和 usage 监控面板 — 多色可视化
 - 选项 1: "Browser popup with auto-refresh" — 浏览器 HTML 仪表盘，自动刷新
 - 选项 2: "Inline (interactive TUI)" — 当前终端内交互式 TUI
 
+同时提示用户：脚本直跑可用 `cd <AutoGoo> && python3 skills/auto-goo/scripts/goo-usage.py --once`。
+
+```bash
+cd <AutoGoo> && python3 skills/auto-goo/scripts/goo-usage.py --once
+```
+
 ### 选项 1: 浏览器 HTML 仪表盘
 
 启动内建 HTTP 服务器，自动打开浏览器：
 
 ```bash
-python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --serve --interval 30 &
-sleep 1
+python3 "${AUTO_GOO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$HOME/workspace/AutoGoo}}/skills/auto-goo/scripts/goo-usage.py" --serve --interval 30
 ```
 
 然后告知用户浏览器地址 `http://localhost:9876`。
@@ -31,7 +36,7 @@ sleep 1
 ### 选项 2: 内联 TUI
 
 ```bash
-python3 "$HOME/workspace/AutoGoo/skills/auto-goo/scripts/goo-usage.py" --once
+python3 "${AUTO_GOO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$HOME/workspace/AutoGoo}}/skills/auto-goo/scripts/goo-usage.py" --once
 ```
 
 先让用户 approve 此命令。

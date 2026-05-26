@@ -671,6 +671,7 @@ if wiki_ready:
 - 任何产生可复用内容的命令都必须归档到 Goo-wiki 或 `.goo/obsidian/` fallback；不得只写 `.goo/*.json` 或只在聊天中展示。适用内容包括 brainstorm 候选目标、usage/token 降本分析、日报/周报、改进建议、benchmark 指标、plan 摘要和执行经验。
 - 用户要求日报、周报、总结今天或调用 `/auto-goo:goo-daily-report` 时，必须把 Claude Code / Codex 会话沉淀到 Goo-wiki `journal/daily/`，并更新 `log.md`；同日日报已存在时只追加新增内容，不整体覆盖已有人工整理。
 - Goo-wiki 可用时优先写入 `{wiki_dir}/{project_archive_dir}/` 并追加 `Goo-wiki/log.md`；不可用时写入 `{fallback_project_dir}` 作为本地 fallback。
+- 归档完成前必须补齐并验收 Markdown 连接图谱：任务页链接项目入口、复用的 `wiki_context` / `context_artifacts` 和关键概念/问题/指标/历史任务页；项目 `index.md` 与 `log.md` 反向链接任务页；新增 concept/lessons/metrics 页面链接回任务页或项目入口。缺少这些链接时不得把 archive step 标记为 completed。
 - 不把归档当作事后报告；归档内容要能支撑下一次任务的召回、规划和复用。
 """
 

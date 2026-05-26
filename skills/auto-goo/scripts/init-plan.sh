@@ -121,8 +121,9 @@ def main() -> int:
             "name": "归档到 Goo-wiki",
             "description": (
                 "将任务目标、计划、关键证据、产物路径、验证结果、决策和可复用经验"
-                "归档到 Goo-wiki；维护任务页、项目入口、相关概念/问题/指标页和 log.md "
-                "的 Wikilink；Goo-wiki 不可用时写入 .goo/obsidian/ fallback"
+                "归档到 Goo-wiki；必须补齐任务页、项目入口 index.md、log.md、复用知识页"
+                "和新增经验页之间的 Wikilink/backlink 关系，防止 Obsidian 连接图谱断裂；"
+                "Goo-wiki 不可用时写入 .goo/obsidian/ fallback"
             ),
             "depends_on": [step["id"] for step in steps],
             "type": "archive",
@@ -134,7 +135,11 @@ def main() -> int:
             "outputs": [archive_output],
             "allowed_read_paths": [".goo/plan.json", ".goo/logs/", ".goo/artifacts/"],
             "allowed_write_paths": [".goo/obsidian/"],
-            "validation": "归档页或 fallback 笔记存在，并记录产物路径、验证结果和可复用经验",
+            "validation": (
+                "归档页或 fallback 笔记存在；任务页链接项目入口、复用的 wiki_context/context_artifacts "
+                "和关键概念/问题/指标/历史任务页；项目 index.md 与 log.md 反向链接任务页；"
+                "新增 concept/lessons/metrics 页也链接回任务页或项目入口；记录产物路径、验证结果和可复用经验"
+            ),
             "risk_level": "low",
             "requires_user_confirm": False,
             "agent_id": None,
