@@ -381,7 +381,7 @@ DAG 结构总结：
 | `status` | `pending` → `running` → `completed` / `failed`。主会话派发/检测到完成时更新 |
 | `progress` | 0-100 整数，agent 每次心跳时更新。pending 为 0，completed 为 100 |
 | `agent_id` | 执行该步骤的 Agent ID，派发时填写，完成后保留用于审计 |
-| `heartbeat_at` | 最后一次心跳时间戳。agent 每 30s 更新，主会话通过此字段判断 agent 是否存活 |
+| `heartbeat_at` | 最后一次心跳时间戳。agent 在每个里程碑更新（启动→读输入→核心过半→产物接近完成→完成，见 execution-engine.md Heartbeat 表），主会话通过此字段判断 agent 是否存活 |
 | `started_at` | 步骤开始时间戳 |
 | `completed_at` | 步骤完成时间戳 |
 | `estimated_time` | 可选，如 "5min" |
@@ -417,7 +417,7 @@ pending ──→ running ──→ completed
   │
   └── 跳过（depends_on 中有 failed 且非关键路径）
 
-心跳保活：running 状态的步骤每 30s 更新 heartbeat_at。
+心跳保活：running 状态的步骤在 5 个里程碑点更新 heartbeat_at（启动→15→50→85→完成/失败）。
 恢复时如果 heartbeat_at 超过 2 分钟未更新 → 视为僵尸进程，可重新派发。
 ```
 

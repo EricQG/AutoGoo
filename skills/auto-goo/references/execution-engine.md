@@ -153,19 +153,22 @@ for step in batch:
 
 ### plan.json 实时回写
 
-每步状态变更必须立即更新 plan.json：
+每步状态变更必须立即更新 plan.json，同时必须更新 plan 顶层状态：
 
-| 时机 | 更新字段 |
-|------|---------|
-| 派发 Agent 前 | `status="running"`, `agent_id`, `started_at=now`, `heartbeat_at=now` |
-| Agent 完成 | `status="completed"/"failed"`, `completed_at=now` |
-| Agent 心跳 | `heartbeat_at=now`（agent 每 30s 自行更新） |
+| 时机 | step 更新字段 | plan 顶层更新 |
+|------|-------------|-------------|
+| 派发 Agent 前 | `status="running"`, `agent_id`, `started_at=now`, `heartbeat_at=now` | `goo-status.py --update-status` |
+| Agent 心跳（里程碑） | `heartbeat_at=now`, `progress=<N>`（见 Heartbeat 表） | — |
+| Agent 完成 | `status="completed"`, `completed_at=now`, `progress=100` | `goo-status.py --update-status` |
+| Agent 失败 | `status="failed"`, `completed_at=now` | `goo-status.py --update-status` |
 
-**Plan 级别状态**：`goo-status.py --update-status` 会自动根据步骤状态计算并更新 plan 顶层的 `status`、`started_at`、`completed_at` 字段。主 Agent 应在关键节点调用：
+**Plan 顶层状态更新是强制的**，不是可选的"建议"。主 Agent 在每次 step 状态变更后必须立即调用：
 
 ```bash
 python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/goo-status.py" --plan .goo/plan.json --update-status
 ```
+
+这会更新 plan 顶层的 `status`（`pending` → `running` → `completed`/`failed`）、`started_at`（首次进入 running 时）和 `completed_at`（全部完成或失败时）。不调用此命令会导致 plan 顶层状态与实际 step 状态不同步。`/auto-goo:goo-status` 也会读取此字段渲染仪表盘。
 
 状态回写必须使用插件脚本，避免多个 Agent 用临时 JSON 代码互相覆盖：
 
@@ -211,17 +214,37 @@ python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-st
 - 相关 wiki_context: {relevant_wiki_context}
 - 不要使用其他 Subagent 的未归档草稿作为依据
 
+## Heartbeat（强制）
+
+**主 Agent 依赖此字段判断你是否存活。不更新 heartbeat 会被误判为僵尸进程并重派。**
+
+先解析 AutoGoo 根目录：`AUTO_GOO_ROOT="${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}"`
+
+命令模板（替换 `<id>` 和 `<0-100>`）：
+```bash
+python3 "$AUTO_GOO_ROOT/skills/auto-goo/scripts/update-step.py" --plan .goo/plan.json --step-id <id> --heartbeat --progress <0-100>
+```
+
+在以下里程碑必须调用上述命令更新 `heartbeat_at` + `progress`：
+
+| 里程碑 | `--progress` | 时机 |
+|--------|-------------|------|
+| 启动 | `5` | **第一步**，读输入之前 |
+| 理解上下文 | `15` | 读完输入、wiki、上游产物后 |
+| 核心过半 | `50` | 主要逻辑/实现过半时 |
+| 产物接近完成 | `85` | 写完输出、自查前 |
+| 完成/失败 | `100` + `--complete` 或 `--fail` | 最终状态 |
+
+**启动和完成必须分别用 `--start --progress 5` 和 `--complete`，中间里程碑用 `--heartbeat --progress <N>`。**
+
 ## 交付要求
 1. 在 {cwd} 目录下工作
-2. **第一步：更新 plan.json** — 调用 `update-step.py --start --progress 5` 写入 `status=running`、`started_at`、`heartbeat_at`
+2. **第一步**：调用 `update-step.py --start --progress 5`
 3. **创建日志文件** `.goo/logs/{YYYY-MM-DDTHH-MM-SS}_step-{id}_{name}.md`，记录开始时间和任务概要
-4. **每 30 秒更新 plan.json**：调用 `update-step.py --heartbeat --progress <0-100>`
-   - `heartbeat_at` = 当前时间
-   - `progress` = 0-100 的进度估算（已生成行数/估算总行数、已处理子图/总子图等）
-   - 进度估算方法：任务开头在心里拆 3-5 个里程碑（如：读输入 10% → 核心逻辑 50% → 写输出 80% → 自查 95%），每过一个里程碑更新一次
+4. **每到一个里程碑**调用 `update-step.py --heartbeat --progress <N>`（见上方 Heartbeat 表）
 5. 执行实现后**更新日志**，补充：关键决策、输出产物路径、耗时
-6. **完成后回写 plan.json**：调用 `update-step.py --complete`
-7. 如果失败：调用 `update-step.py --fail --error "<reason>"`，并在日志中记录失败原因
+6. **完成后**调用 `update-step.py --complete`
+7. 失败时调用 `update-step.py --fail --error "<reason>"`，并在日志中记录失败原因
 8. 日志必须包含：做了什么、关键决策、输出产物路径、耗时
 
 ## 产物
@@ -231,7 +254,7 @@ python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-st
 
 ### 优化型 (type: "optimize")
 
-在 exec 模板基础上追加：
+在 exec 模板（含上方 Heartbeat 和交付要求）基础上追加以下优化要求和额外心跳里程碑：
 
 ```
 ## 优化要求
@@ -239,6 +262,14 @@ python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-st
 - 每次优化后必须用相同指标评测
 - 记录优化前后对比
 - 如果连续两次无提升，停止并报告
+
+## 优化额外心跳
+在 exec 里程碑基础上增加：
+
+| 里程碑 | `--progress` | 时机 |
+|--------|-------------|------|
+| 基线测量完成 | `25` | 基线跑完，记录指标 |
+| 每轮优化后 | `45→65→85` | 逐轮递增，最后一轮到 85 |
 ```
 
 ### 评测型 (type: "eval")
@@ -260,6 +291,17 @@ python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-st
 3. 执行评测
 4. 写入 .goo/logs/ 和 .goo/eval-metrics.md
 5. **完成后回写 plan.json**：status="completed"
+
+## Heartbeat（强制）
+与 exec 模板相同的心跳机制。先解析 AutoGoo 根目录，在以下里程碑调用 `update-step.py`：
+
+| 里程碑 | `--progress` | 时机 |
+|--------|-------------|------|
+| 启动 | `5` (`--start`) | 第一步 |
+| 指标研究完成 | `20` | 评价指标和 protocol 确定后 |
+| 评测执行中 | `60` | 评测跑完一轮 |
+| 写入报告 | `90` | 日志和 eval-metrics 写入后 |
+| 完成 | `--complete` | 最终 |
 ```
 
 ## 通用 Dispatch 流程
@@ -372,6 +414,7 @@ python3 "${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/auto-goo/scripts/update-st
 - [ ] 步骤间不会写同一个文件（与所有 running agent 无冲突）？
 - [ ] 该 step 是否声明了合法 `subagent` 角色？不合法时先补 plan 或创建新角色，不由主 Agent 代执行
 - [ ] 该 Agent 的 prompt 包含：任务描述 + 上游产物路径 + 允许读写范围 + 回写 plan.json 指令？
+- [ ] **该 Agent 的 prompt 包含 Heartbeat 强制分段？**（缺少此项 Subagent 不更新 heartbeat_at，会被误判为僵尸）
 - [ ] 该 Agent 即使看不到主会话聊天记录，也能仅凭 plan/Markdown/wiki 摘要完成当前 step？
 - [ ] 该 Agent 只拿到与当前 step 相关的 wiki_context 和日志摘要？
 - [ ] 该 Agent 知道往哪里写日志（`.goo/logs/`）？

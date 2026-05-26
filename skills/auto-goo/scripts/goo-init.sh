@@ -135,6 +135,42 @@ expand_path() {
   fi
 }
 
+ensure_wiki_vault() {
+  local wiki_dir="$1"
+  WIKI_CREATED=0
+
+  if [[ ! -d "$wiki_dir" ]]; then
+    mkdir -p "$wiki_dir"
+    WIKI_CREATED=1
+  fi
+
+  mkdir -p \
+    "$wiki_dir/wiki/projects" \
+    "$wiki_dir/wiki/concepts" \
+    "$wiki_dir/wiki/questions" \
+    "$wiki_dir/journal/daily" \
+    "$wiki_dir/journal/weekly"
+
+  if [[ ! -f "$wiki_dir/CLAUDE.md" ]]; then
+    cat > "$wiki_dir/CLAUDE.md" <<'EOF'
+# Goo-wiki Instructions
+
+This vault stores reusable project memory for AutoGoo workflows.
+
+- Put project notes under `wiki/projects/`.
+- Put reusable concepts under `wiki/concepts/`.
+- Put daily and weekly work logs under `journal/daily/` and `journal/weekly/`.
+- Keep `log.md` as a compact activity index.
+EOF
+    WIKI_CREATED=1
+  fi
+
+  if [[ ! -f "$wiki_dir/log.md" ]]; then
+    printf '# Goo-wiki Log\n' > "$wiki_dir/log.md"
+    WIKI_CREATED=1
+  fi
+}
+
 project_root() {
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
@@ -259,6 +295,7 @@ fi
 
 WIKI_DIR_EXPANDED="$(expand_path "$WIKI_DIR")"
 WIKI_READY=0
+WIKI_CREATED=0
 PROJECT_ARCHIVE_DIR=""
 FALLBACK_PROJECT_ARCHIVE_DIR=""
 GIT_REMOTE_URL=""
@@ -371,11 +408,13 @@ if [[ "$SERVERS_JSON" != "[]" ]]; then
   echo "  secrets:    $SECRETS_FILE"
 fi
 
-if [[ -f "$WIKI_DIR_EXPANDED/CLAUDE.md" ]]; then
+ensure_wiki_vault "$WIKI_DIR_EXPANDED"
+if [[ "$WIKI_CREATED" -eq 1 ]]; then
+  WIKI_READY=1
+  echo "  wiki check: created ($WIKI_DIR_EXPANDED/CLAUDE.md)"
+else
   WIKI_READY=1
   echo "  wiki check: ready ($WIKI_DIR_EXPANDED/CLAUDE.md)"
-else
-  echo "  wiki check: not found; archive will fall back to $FALLBACK_DIR"
 fi
 
 if [[ -f "$CONFIG_FILE" && "$FORCE" -ne 1 ]]; then

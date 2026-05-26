@@ -39,8 +39,8 @@ tools: [Read, Write, Edit, Bash, WebSearch, Agent]
 7. 确保目标目录存在：用户级 `~/.auto-goo/`，项目级 `.goo/`。
 8. 如果目标配置已存在，脚本内部自行检测并询问是否覆盖。用户保留 config 但传了 `--update-claude-md` 或交互确认更新 `CLAUDE.md` 时，仍必须继续更新项目 `CLAUDE.md`。
 9. 按优先级解析 wiki 路径：`AUTO_GOO_WIKI_DIR` → `.goo/config.json.wiki_dir` → `~/.auto-goo/config.json.wiki_dir` → `~/workspace/Goo-wiki`。
-10. 检查 `<wiki_dir>/CLAUDE.md` 是否存在。
-11. 如果是 `--project`，确定 `project_slug`：默认用项目根目录名，可用 `--project-slug <slug>` 覆盖；Goo-wiki 可用时创建或复用 `<wiki_dir>/wiki/projects/<project_slug>/` 作为项目归档根路径。
+10. 确保 Goo-wiki 路径存在：如果用户确认或输入的 `<wiki_dir>` 不存在，脚本必须自动创建该目录，并补齐 `CLAUDE.md`、`log.md`、`wiki/projects/`、`wiki/concepts/`、`wiki/questions/`、`journal/daily/`、`journal/weekly/` 基础结构；不得因为路径不存在而改用 `.goo/obsidian/` fallback。
+11. 如果是 `--project`，确定 `project_slug`：默认用项目根目录名，可用 `--project-slug <slug>` 覆盖；创建或复用 `<wiki_dir>/wiki/projects/<project_slug>/` 作为项目归档根路径。
 12. 如果项目是 Git repo，读取 `origin` remote（没有 origin 时读取第一个 remote），写入 `.goo/config.json.archive.git_remote_url`，并同步到 `<wiki_dir>/wiki/projects/<project_slug>/index.md` 的项目元信息块。
 13. 写入目标 config，默认结构参考 `skills/auto-goo/templates/config.example.json`；项目级配置必须记录 `archive.project_slug`、`archive.project_dir` 和 `archive.fallback_project_dir`；有远程服务器时写入 `servers`。
 14. 如果是 `--project` 且 Goo-wiki 可用，必须询问用户是否在项目 `CLAUDE.md` 中加入或更新 AutoGoo marker 包裹的项目归档原则和要求；只改该段，不覆盖用户已有项目指引。非交互场景默认不写，需传 `--update-claude-md` 明确写入；用户传 `--skip-claude-md` 时跳过。
@@ -242,14 +242,30 @@ MAX_CONCURRENT = 6 (plan.json 顶层可覆盖)
 
 主循环:
   1. 扫描 status=pending 且 depends_on 全 completed → 按优先级排序 → 入队
-  2. 填充空槽位 (间隔 3-5s 错峰)
-  3. 等待任一 agent 完成 → 回写 plan.json → 立即回到步骤 1
-  4. 心跳巡检每 30s → 超时无心跳标记 failed → 释放槽位
+  2. 填充空槽位 (间隔 3-5s 错峰)，派发前调用 `goo-status.py --update-status`
+  3. 等待任一 agent 完成 → 回写 plan.json → 调用 `goo-status.py --update-status` → 立即回到步骤 1
+  4. 心跳巡检每 30s → 超时无心跳标记 failed → 调用 `goo-status.py --update-status` → 释放槽位
+  5. 所有 step 完成或失败 → 调用 `goo-status.py --update-status` 做最终状态同步
 ```
 
-### 心跳与进度
+### 心跳与进度（强制）
 
-每个 Agent 每 30s 必须在解析 AutoGoo 根目录后调用 `skills/auto-goo/scripts/update-step.py --heartbeat --progress <0-100>` 更新 `heartbeat_at` + **`progress` (0-100)**。`progress` 由 agent 自行估算（已生成行数/估算总行数、已处理子图数/总子图数等）。`/auto-goo:goo-status` 必须调用 `skills/auto-goo/scripts/goo-status.py` 渲染进度条和心跳告警。
+**主 Agent 派发 Subagent 时，prompt 必须包含 `references/execution-engine.md` 中对应类型的 Heartbeat 分段。** 不包含心跳指令会导致 Subagent 不更新 `heartbeat_at`，被误判为僵尸进程。
+
+**Subagent 必须在以下里程碑调用 `update-step.py --heartbeat --progress <N>`**（非时间驱动，是进度驱动）：
+
+| 里程碑 | progress | 命令 |
+|--------|----------|------|
+| 启动 | 5 | `--start --progress 5` |
+| 读输入完成 | 15 | `--heartbeat --progress 15` |
+| 核心过半 | 50 | `--heartbeat --progress 50` |
+| 产物接近完成 | 85 | `--heartbeat --progress 85` |
+| 完成 | 100 | `--complete` |
+| 失败 | - | `--fail --error "<reason>"` |
+
+先解析 AutoGoo 根目录：`AUTO_GOO_ROOT="${AUTO_GOO_ROOT:-$CLAUDE_PLUGIN_ROOT}"`
+
+`/auto-goo:goo-status` 必须调用 `skills/auto-goo/scripts/goo-status.py` 渲染进度条和心跳告警。
 
 ### 失败处理
 
